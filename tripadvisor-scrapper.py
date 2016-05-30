@@ -29,8 +29,6 @@ number_of_pages = soup.find('a', attrs={'class': 'last'}).contents[0]
 number_of_cities_per_page = 30
 
 page_urls = list()
-hotel_urls = list()
-
 
 for i in range(0, int(number_of_pages)):
     if i == 0:
@@ -49,6 +47,24 @@ for i in range(0, int(number_of_pages)):
         # Build the current page url and append it to the list
         page_url = city_default_url[:second_dash_index] + '-oa' + str(pagination) + city_default_url[second_dash_index:] + '#ACCOM_OVERVIEW'
         page_urls.append(page_url)
+
+hotel_urls = list()
+
+for i, page_url in enumerate(page_urls):
+    # Build url out of base and current page url
+    url = BASE_URL + page_url
+
+    # Retrieve url content of the page url
+    content = urllib2.urlopen(url)
+
+    # Define parser
+    soup = BeautifulSoup(content, 'html.parser')
+
+    # Store each hotel url in the list
+    for j, hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title '})):
+        hotel_urls.append(soup.find_all('a', attrs={'class': 'property_title '})[j]['href'])
+
+
 
 
 # /Hotels-g293974-oa30-Istanbul-Hotels.html#ACCOM_OVERVIEW
