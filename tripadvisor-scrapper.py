@@ -8,15 +8,59 @@ import time
 from functools import wraps
 from bs4 import BeautifulSoup
 
-url = 'http://www.tripadvisor.com/Hotels-g293974-Istanbul-Hotels.html'
+# Define base url of TripAdvisor
+BASE_URL = 'http://www.tripadvisor.com/'
 
+
+# TODO: Load from file or enter via commandline
+city_default_url = 'Hotels-g293974-Istanbul-Hotels.html'
+
+url = BASE_URL + city_default_url
+
+# Retrieve url content of city (first page)
 content = urllib2.urlopen(url)
 
+# Define parser
 soup = BeautifulSoup(content, 'html.parser')
 
+# Scrape number of pages (pagination of hotels in the city)
 number_of_pages = soup.find('a', attrs={'class': 'last'}).contents[0]
 
+number_of_cities_per_page = 30
+
+page_urls = list()
+hotel_urls = list()
+
+
+for i in range(0, int(number_of_pages)):
+    if i == 0:
+        # Append the already available first page url
+        page_urls.append(city_default_url)
+    else:
+        # Calculate the dash positions
+        occurences_of_dash = [j for j in range(len(city_default_url)) if city_default_url.startswith('-', j)]
+
+        # Get the second dash position
+        second_dash_index = occurences_of_dash[1]
+
+        # Each page contains 30 hotels
+        pagination = i * 30
+
+        # Build the current page url and append it to the list
+        page_url = city_default_url[:second_dash_index] + '-oa' + str(pagination) + city_default_url[second_dash_index:] + '#ACCOM_OVERVIEW'
+        page_urls.append(page_url)
+
+
+# /Hotels-g293974-oa30-Istanbul-Hotels.html#ACCOM_OVERVIEW
+
+#for i in range(number_of_pages):
+#    hotel_links.append(soup.find('a', attrs={'class': 'property_title '})['href'])
+
+
+#<a class="pageNum taLnk" onclick="ta.hac.filters.paging(this, event); ta.trackEventOnPage('STANDARD_PAGINATION', 'page', '2', 0);" data-offset="30" data-page-number="2" href="/Hotels-g293974-oa30-Istanbul-Hotels.html#ACCOM_OVERVIEW">2</a>
+
 '''<a onclick="ta.hac.filters.paging(this, event); ta.trackEventOnPage('STANDARD_PAGINATION', 'last', '37', 0);" class="pageNum last taLnk" data-offset="1080" data-page-number="37" href="/Hotels-g293974-oa1080-Istanbul-Hotels.html#ACCOM_OVERVIEW">37</a>'''
+
 
 
 
