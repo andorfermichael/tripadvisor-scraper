@@ -12,70 +12,71 @@ from bs4 import BeautifulSoup
 BASE_URL = 'http://www.tripadvisor.com/'
 
 # TODO: Load from file or enter via commandline
-city_default_url = 'Hotels-g293974-Istanbul-Hotels.html'
+CITY_DEFAULT_URL = 'Hotels-g293974-Istanbul-Hotels.html'
 
-url = BASE_URL + city_default_url
+CITY_URL = BASE_URL + CITY_DEFAULT_URL
 
 # Retrieve url content of city (first page)
-content = urllib2.urlopen(url)
+content = urllib2.urlopen(CITY_URL)
 
 # Define parser
 soup = BeautifulSoup(content, 'html.parser')
 
 # Scrape number of pages (pagination of hotels in the city)
-number_of_pages = soup.find('a', attrs={'class': 'last'}).contents[0]
+number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
 
 number_of_cities_per_page = 30
+number_of_reviews_per_page = 10
 
-page_urls = list()
+city_pagination_urls = list()
+city_hotel_urls = list()
 
-for i in range(0, 2):#int(number_of_pages)):
+# Get all pagination urls of the city
+for i in range(0, 2):#int(number_of_pages_in_city)):
     if i == 0:
         # Append the already available first page url
-        page_urls.append(city_default_url)
+        city_pagination_urls.append(CITY_DEFAULT_URL)
     else:
         # Calculate the dash positions
-        occurences_of_dash = [j for j in range(len(city_default_url)) if city_default_url.startswith('-', j)]
+        occurences_of_dash = [j for j in range(len(CITY_DEFAULT_URL)) if CITY_DEFAULT_URL.startswith('-', j)]
 
         # Get the second dash position
         second_dash_index = occurences_of_dash[1]
 
         # Each page contains 30 hotels
-        pagination = i * 30
+        city_pagination = i * 30
 
         # Build the current page url and append it to the list
-        page_url = city_default_url[:second_dash_index] + '-oa' + str(pagination) + city_default_url[second_dash_index:] + '#ACCOM_OVERVIEW'
-        page_urls.append(page_url)
+        current_city_pagination_url = CITY_DEFAULT_URL[:second_dash_index] + '-oa' + str(city_pagination) + CITY_DEFAULT_URL[second_dash_index:] + '#ACCOM_OVERVIEW'
+        city_pagination_urls.append(current_city_pagination_url)
 
-hotel_urls = list()
-
-for page_url in page_urls[1:]:
+# Get all hotel urls of the city
+for current_city_pagination_url in city_pagination_urls[1:]:
     # Build url out of base and current page url
-    url = BASE_URL + page_url
+    CITY_URL = BASE_URL + current_city_pagination_url
 
     # Retrieve url content of the page url
-    content = urllib2.urlopen(url)
+    content = urllib2.urlopen(CITY_URL)
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
 
     # Store each hotel url in the list
-    for j, hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title '})):
-        hotel_urls.append(soup.find_all('a', attrs={'class': 'property_title '})[j]['href'])
+    for j, city_hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title '})):
+        city_hotel_urls.append(soup.find_all('a', attrs={'class': 'property_title '})[j]['href'])
 
-number_of_reviews_per_page = 10
-
-for hotel_url in hotel_urls[1:]:
+# Visit each hotel url in the city
+for city_hotel_url in city_hotel_urls[1:]:
     # Build url out of base and current page url
-    url = BASE_URL + hotel_url
+    HOTEL_URL = BASE_URL + city_hotel_url
 
     # Retrieve url content of the page url
-    content = urllib2.urlopen(url)
+    content = urllib2.urlopen(HOTEL_URL)
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
 
-    hotel_page_urls = list()
+    hotel_pagination_urls = list()
 
     pagination_items = soup.find_all('a', attrs={'class': 'pageNum'})
 
@@ -85,28 +86,29 @@ for hotel_url in hotel_urls[1:]:
         if page.contents[0] > max:
             max = page.contents[0]
 
-    number_of_pages = int(max)
+    maximum_pagination_of_hotel = int(max)
 
-    for i in range(0, number_of_pages):
+    # Get all pagination urls of the hotel
+    for i in range(0, maximum_pagination_of_hotel):
         if i == 0:
             # Append the already available first page url
-            page_urls.append(url)
+            hotel_pagination_urls.append(HOTEL_URL)
         else:
             # Calculate the dash positions
-            occurrences_of_dash = [j for j in range(len(url)) if url.startswith('-', j)]
+            occurrences_of_dash = [j for j in range(len(HOTEL_URL)) if HOTEL_URL.startswith('-', j)]
 
             # Get the fourth dash position
             fourth_dash_index = occurrences_of_dash[3]
 
             # Each page contains 30 hotels
-            pagination = i * 10
+            city_pagination = i * 10
 
             # Build the current page url and append it to the list
-            hotel_page_url = url[:fourth_dash_index] + '-or' + str(pagination) + url[fourth_dash_index:] + '#REVIEW'
-            hotel_page_urls.append(hotel_page_url)
+            hotel_page_url = CITY_URL[:fourth_dash_index] + '-or' + str(city_pagination) + HOTEL_URL[fourth_dash_index:] + '#REVIEW'
+            hotel_pagination_urls.append(hotel_page_url)
 
 
-for page in hotel_page_urls:
+for page in hotel_pagination_urls:
     print(page)
 
 
