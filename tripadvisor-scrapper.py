@@ -10,34 +10,48 @@ from bs4 import BeautifulSoup
 
 
 # Get all pagination urls of the city
-def parse_pagination_urls_of_city():
+def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
+    # Initialize the list for the resulting urls
+    pagination_urls = list()
+
+    # Retrieve url content of city (first page)
+    content = requests.get(city_url, header).content
+
+    # Define parser
+    soup = BeautifulSoup(content, 'html.parser')
+
+    # Scrape number of pages (pagination of hotels in the city)
+    number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
+
     for i in range(0, 2):#int(number_of_pages_in_city)):
         if i == 0:
             # Append the already available first page url
-            city_pagination_urls.append(CITY_DEFAULT_URL)
+            pagination_urls.append(city_default_url)
         else:
             # Calculate the dash positions
-            occurences_of_dash = [j for j in range(len(CITY_DEFAULT_URL)) if CITY_DEFAULT_URL.startswith('-', j)]
+            occurences_of_dash = [j for j in range(len(city_default_url)) if city_default_url.startswith('-', j)]
 
             # Get the second dash position
             second_dash_index = occurences_of_dash[1]
 
             # Each page contains 30 hotels
-            city_pagination = i * 30
+            city_pagination = i * offset
 
             # Build the current page url and append it to the list
-            current_city_pagination_url = CITY_DEFAULT_URL[:second_dash_index] + '-oa' + str(city_pagination) + CITY_DEFAULT_URL[second_dash_index:] + '#ACCOM_OVERVIEW'
-            city_pagination_urls.append(current_city_pagination_url)
+            current_city_pagination_url = city_default_url[:second_dash_index] + '-oa' + str(city_pagination) + city_default_url[second_dash_index:] + '#ACCOM_OVERVIEW'
+            pagination_urls.append(current_city_pagination_url)
+
+    return pagination_urls
 
 
 # Get all hotel urls of the city
-def parse_hotel_urls_of_city():
-    for current_city_pagination_url in city_pagination_urls[0:3]:
+def parse_hotel_urls_of_city(city_url, pagination_urls):
+    for pagination_url in pagination_urls[0:3]:
         # Build url out of base and current page url
-        CITY_URL = BASE_URL + current_city_pagination_url
+        city_url = BASE_URL + pagination_url
 
         # Retrieve url content of the page url
-        content = requests.get(CITY_URL, headers).content
+        content = requests.get(city_url, headers).content
 
         # Define parser
         soup = BeautifulSoup(content, 'html.parser')
@@ -45,6 +59,7 @@ def parse_hotel_urls_of_city():
         # Store each hotel url in the list
         for j, city_hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title'})):
             city_hotel_urls.append(soup.find_all('a', attrs={'class': 'property_title '})[j]['href'])
+
 
 # Visit each hotel url in the city
 def parse_pagination_and_review_urls_of_hotel():
@@ -114,21 +129,11 @@ if __name__ == '__main__':
 
     CITY_URL = BASE_URL + CITY_DEFAULT_URL
 
-    # Retrieve url content of city (first page)
-    content = requests.get(CITY_URL, headers).content
-
-    # Define parser
-    soup = BeautifulSoup(content, 'html.parser')
-
-    # Scrape number of pages (pagination of hotels in the city)
-    number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
-
     # Define items per page
-    number_of_cities_per_page = 30
+    number_of_hotels_per_page = 30
     number_of_reviews_per_page = 10
 
     # Initialize lists for later storing of urls
-    city_pagination_urls = list()
     city_hotel_urls = list()
     hotel_pagination_urls = list()
     hotel_review_urls = list()
@@ -137,10 +142,10 @@ if __name__ == '__main__':
     city_hotel_urls_unique = set(city_hotel_urls)
     city_hotel_urls = list(city_hotel_urls_unique)
 
-    parse_pagination_urls_of_city()
-    print(city_pagination_urls)
-    parse_hotel_urls_of_city()
-    parse_pagination_and_review_urls_of_hotel()
+    city_pagination_urls = parse_pagination_urls_of_city(CITY_DEFAULT_URL, CITY_URL, number_of_hotels_per_page, headers)
+    #city_hotel_urls = parse_hotel_urls_of_city()
+    #parse_pagination_and_review_urls_of_hotel()
+    #print(hotel_review_urls)
 
 
 
