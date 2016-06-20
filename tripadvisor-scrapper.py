@@ -8,124 +8,141 @@ import time
 from functools import wraps
 from bs4 import BeautifulSoup
 
-# Define user agent
-headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-
-# Define base url of TripAdvisor
-BASE_URL = 'http://www.tripadvisor.com/'
-
-# TODO: Load from file or enter via commandline
-CITY_DEFAULT_URL = 'Hotels-g293974-Istanbul-Hotels.html'
-
-CITY_URL = BASE_URL + CITY_DEFAULT_URL
-
-# Retrieve url content of city (first page)
-content = requests.get(CITY_URL, headers).content
-
-# Define parser
-soup = BeautifulSoup(content, 'html.parser')
-
-# Scrape number of pages (pagination of hotels in the city)
-number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
-
-number_of_cities_per_page = 30
-number_of_reviews_per_page = 10
-
-city_pagination_urls = list()
-city_hotel_urls = list()
 
 # Get all pagination urls of the city
-for i in range(0, 2):#int(number_of_pages_in_city)):
-    if i == 0:
-        # Append the already available first page url
-        city_pagination_urls.append(CITY_DEFAULT_URL)
-    else:
-        # Calculate the dash positions
-        occurences_of_dash = [j for j in range(len(CITY_DEFAULT_URL)) if CITY_DEFAULT_URL.startswith('-', j)]
+def parse_pagination_urls_of_city():
+    for i in range(0, 2):#int(number_of_pages_in_city)):
+        if i == 0:
+            # Append the already available first page url
+            city_pagination_urls.append(CITY_DEFAULT_URL)
+        else:
+            # Calculate the dash positions
+            occurences_of_dash = [j for j in range(len(CITY_DEFAULT_URL)) if CITY_DEFAULT_URL.startswith('-', j)]
 
-        # Get the second dash position
-        second_dash_index = occurences_of_dash[1]
+            # Get the second dash position
+            second_dash_index = occurences_of_dash[1]
 
-        # Each page contains 30 hotels
-        city_pagination = i * 30
+            # Each page contains 30 hotels
+            city_pagination = i * 30
 
-        # Build the current page url and append it to the list
-        current_city_pagination_url = CITY_DEFAULT_URL[:second_dash_index] + '-oa' + str(city_pagination) + CITY_DEFAULT_URL[second_dash_index:] + '#ACCOM_OVERVIEW'
-        city_pagination_urls.append(current_city_pagination_url)
+            # Build the current page url and append it to the list
+            current_city_pagination_url = CITY_DEFAULT_URL[:second_dash_index] + '-oa' + str(city_pagination) + CITY_DEFAULT_URL[second_dash_index:] + '#ACCOM_OVERVIEW'
+            city_pagination_urls.append(current_city_pagination_url)
+
 
 # Get all hotel urls of the city
-for current_city_pagination_url in city_pagination_urls[0:1]:
-    # Build url out of base and current page url
-    CITY_URL = BASE_URL + current_city_pagination_url
+def parse_hotel_urls_of_city():
+    for current_city_pagination_url in city_pagination_urls[0:3]:
+        # Build url out of base and current page url
+        CITY_URL = BASE_URL + current_city_pagination_url
 
-    # Retrieve url content of the page url
+        # Retrieve url content of the page url
+        content = requests.get(CITY_URL, headers).content
+
+        # Define parser
+        soup = BeautifulSoup(content, 'html.parser')
+
+        # Store each hotel url in the list
+        for j, city_hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title'})):
+            city_hotel_urls.append(soup.find_all('a', attrs={'class': 'property_title '})[j]['href'])
+
+# Visit each hotel url in the city
+def parse_pagination_and_review_urls_of_hotel():
+    for city_hotel_url in city_hotel_urls[0:2]:
+        # Build url out of base and current page url
+        HOTEL_URL = BASE_URL + city_hotel_url[1:]
+
+        # Retrieve url content of the page url
+        content = requests.get(HOTEL_URL, headers).content
+
+        # Define parser
+        soup = BeautifulSoup(content, 'html.parser')
+
+        # Scrape the highest pagination value of a hotel's pages
+        pagination_items = soup.find_all('a', attrs={'class': 'pageNum'})
+        maximum_pagination_of_hotel = int(pagination_items[-1].contents[0])
+
+        # Calculate all pagination urls of the hotel
+        for i in range(0, maximum_pagination_of_hotel):
+            if i == 0:
+                # Append the already available first page url
+                hotel_pagination_urls.append(HOTEL_URL + '#REVIEWS')
+            else:
+                # Calculate the dash positions
+                occurrences_of_dash = [j for j in range(len(HOTEL_URL)) if HOTEL_URL.startswith('-', j)]
+
+                # Get the fourth dash position
+                fourth_dash_index = occurrences_of_dash[3]
+
+                # Each page contains 10 hotels
+                hotel_pagination = i * 10
+
+                # Build the current page url and append it to the list
+                hotel_page_url = HOTEL_URL[:fourth_dash_index] + '-or' + str(hotel_pagination) + HOTEL_URL[fourth_dash_index:] + '#REVIEWS'
+                hotel_pagination_urls.append(hotel_page_url)
+
+        for hotel_pagination_url in hotel_pagination_urls:
+            # Retrieve url content of the hotel pagination url
+            content = requests.get(hotel_pagination_url, headers).content
+
+            # Define parser
+            soup = BeautifulSoup(content, 'html.parser')
+
+            # Get all review containers of the current page
+            hotel_review_containers = soup.find_all('div', attrs={'class': 'basic_review'})
+
+            # Retrieve each review url of the current hotel pagination page
+            for hotel_review_container in hotel_review_containers:
+                quote = hotel_review_container.find('div', attrs={'class': 'quote'})
+
+                # Get the review url without base url
+                review_url = quote.find('a')['href'][1:]
+
+                # Append the complete review url to the list
+                hotel_review_urls.append(BASE_URL + review_url)
+
+# Main
+if __name__ == '__main__':
+    # Define user agent
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:47.0) Gecko/20100101 Firefox/47.0'}
+
+    # Define base url of TripAdvisor
+    BASE_URL = 'http://www.tripadvisor.com/'
+
+    # TODO: Load from file or enter via commandline
+    CITY_DEFAULT_URL = 'Hotels-g293974-Istanbul-Hotels.html'
+
+    CITY_URL = BASE_URL + CITY_DEFAULT_URL
+
+    # Retrieve url content of city (first page)
     content = requests.get(CITY_URL, headers).content
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
 
-    # Store each hotel url in the list
-    for j, city_hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title '})):
-        city_hotel_urls.append(soup.find_all('a', attrs={'class': 'property_title '})[j]['href'])
+    # Scrape number of pages (pagination of hotels in the city)
+    number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
 
-# Visit each hotel url in the city
-for city_hotel_url in city_hotel_urls[0:1]:
-    # Build url out of base and current page url
-    HOTEL_URL = BASE_URL + city_hotel_url[1:]
+    # Define items per page
+    number_of_cities_per_page = 30
+    number_of_reviews_per_page = 10
 
-    # Retrieve url content of the page url
-    content = requests.get(HOTEL_URL, headers).content
-
-    # Define parser
-    soup = BeautifulSoup(content, 'html.parser')
-
+    # Initialize lists for later storing of urls
+    city_pagination_urls = list()
+    city_hotel_urls = list()
     hotel_pagination_urls = list()
-
-    # Scrape the highest pagination value of a hotel's pages
-    pagination_items = soup.find_all('a', attrs={'class': 'pageNum'})
-    maximum_pagination_of_hotel = int(pagination_items[-1].contents[0])
-
-    # Calculate all pagination urls of the hotel
-    for i in range(0, maximum_pagination_of_hotel):
-        if i == 0:
-            # Append the already available first page url
-            hotel_pagination_urls.append(HOTEL_URL + '#REVIEWS')
-        else:
-            # Calculate the dash positions
-            occurrences_of_dash = [j for j in range(len(HOTEL_URL)) if HOTEL_URL.startswith('-', j)]
-
-            # Get the fourth dash position
-            fourth_dash_index = occurrences_of_dash[3]
-
-            # Each page contains 10 hotels
-            hotel_pagination = i * 10
-
-            # Build the current page url and append it to the list
-            hotel_page_url = HOTEL_URL[:fourth_dash_index] + '-or' + str(hotel_pagination) + HOTEL_URL[fourth_dash_index:] + '#REVIEWS'
-            hotel_pagination_urls.append(hotel_page_url)
-
     hotel_review_urls = list()
 
-    for hotel_pagination_url in hotel_pagination_urls:
-        # Retrieve url content of the hotel pagination url
-        content = requests.get(hotel_pagination_url, headers).content
-        print(hotel_pagination_url)
+    # Remove duplicate elements
+    city_hotel_urls_unique = set(city_hotel_urls)
+    city_hotel_urls = list(city_hotel_urls_unique)
 
-        # Define parser
-        soup = BeautifulSoup(content, 'html.parser')
+    parse_pagination_urls_of_city()
+    print(city_pagination_urls)
+    parse_hotel_urls_of_city()
+    parse_pagination_and_review_urls_of_hotel()
 
-        # Get all review containers of the current page
-        hotel_review_containers = soup.find_all('div', attrs={'class': 'basic_review'})
 
-        # Retrieve each review url of the current hotel pagination page
-        for hotel_review_container in hotel_review_containers:
-            quote = hotel_review_container.find('div', attrs={'class': 'quote'})
-
-            # Get the review url without base url
-            review_url = quote.find('a')['href'][1:]
-
-            # Append the complete review url to the list
-            hotel_review_urls.append(BASE_URL + review_url)
 
 
 #https://www.tripadvisor.com/Hotel_Review-g293974-d1181320-Reviews-Osmanhan_Hotel-Istanbul.html#REVIEWS
