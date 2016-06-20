@@ -23,7 +23,7 @@ def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
     # Scrape number of pages (pagination of hotels in the city)
     number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
 
-    for i in range(0, 2):#int(number_of_pages_in_city)):
+    for i in range(0, int(number_of_pages_in_city)):
         if i == 0:
             # Append the already available first page url
             pagination_urls.append(city_default_url)
@@ -49,7 +49,7 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
     # Initialize the list for the resulting urls
     hotel_urls = list()
 
-    for pagination_url in pagination_urls[0:3]:
+    for pagination_url in pagination_urls:
         # Build url out of base and current page url
         city_pagination_url = base_url + pagination_url
 
@@ -70,12 +70,12 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
     return hotel_urls
 
 
-# Get all pagination urls of a hotel
+# Get all pagination urls for all given hotels
 def parse_pagination_urls_of_hotel(hotel_urls, header):
     # Initialize the list for the resulting urls
-    hotel_pagination_urls = list()
+    pagination_urls = list()
 
-    for hotel_url in hotel_urls[0:2]:
+    for hotel_url in hotel_urls:
         # Retrieve url content of the page url
         content = requests.get(hotel_url, header).content
 
@@ -90,7 +90,7 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
         for i in range(0, maximum_pagination_of_hotel):
             if i == 0:
                 # Append the already available first page url
-                hotel_pagination_urls.append(hotel_url + '#REVIEWS')
+                pagination_urls.append(hotel_url + '#REVIEWS')
             else:
                 # Calculate the dash positions
                 occurrences_of_dash = [j for j in range(len(hotel_url)) if hotel_url.startswith('-', j)]
@@ -103,14 +103,18 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
 
                 # Build the current page url and append it to the list
                 hotel_page_url = hotel_url[:fourth_dash_index] + '-or' + str(hotel_pagination) + hotel_url[fourth_dash_index:] + '#REVIEWS'
-                hotel_pagination_urls.append(hotel_page_url)
+                pagination_urls.append(hotel_page_url)
 
-    return hotel_pagination_urls
+    return pagination_urls
 
-def parse_review_urls_of_hotel():
-    for hotel_pagination_url in hotel_pagination_urls:
+# Get all review urls of all given hotels
+def parse_review_urls_of_hotel(base_url, pagination_urls, header):
+    # Initialize the list for the resulting urls
+    review_urls = list()
+
+    for pagination_url in pagination_urls:
         # Retrieve url content of the hotel pagination url
-        content = requests.get(hotel_pagination_url, headers).content
+        content = requests.get(pagination_url, header).content
 
         # Define parser
         soup = BeautifulSoup(content, 'html.parser')
@@ -126,7 +130,9 @@ def parse_review_urls_of_hotel():
             review_url = quote.find('a')['href'][1:]
 
             # Append the complete review url to the list
-            hotel_review_urls.append(BASE_URL + review_url)
+            review_urls.append(base_url + review_url)
+
+    return review_urls
 
 # Main
 if __name__ == '__main__':
@@ -144,15 +150,11 @@ if __name__ == '__main__':
     number_of_hotels_per_page = 30
     number_of_reviews_per_page = 10
 
-    # Initialize lists for later storing of urls
-    #hotel_pagination_urls = list()
-    hotel_review_urls = list()
-
+    # Parse all needed urls
     city_pagination_urls = parse_pagination_urls_of_city(CITY_DEFAULT_URL, CITY_URL, number_of_hotels_per_page, headers)
     city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
     hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
-    #parse_pagination_and_review_urls_of_hotel()
-    #print(hotel_review_urls)
+    hotel_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
 
 
 
