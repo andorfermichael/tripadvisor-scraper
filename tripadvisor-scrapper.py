@@ -11,7 +11,6 @@ from bs4 import BeautifulSoup
 # Define base url of TripAdvisor
 BASE_URL = 'http://www.tripadvisor.com/'
 
-
 # TODO: Load from file or enter via commandline
 city_default_url = 'Hotels-g293974-Istanbul-Hotels.html'
 
@@ -30,7 +29,7 @@ number_of_cities_per_page = 30
 
 page_urls = list()
 
-for i in range(0, int(number_of_pages)):
+for i in range(0, 2):#int(number_of_pages)):
     if i == 0:
         # Append the already available first page url
         page_urls.append(city_default_url)
@@ -50,7 +49,7 @@ for i in range(0, int(number_of_pages)):
 
 hotel_urls = list()
 
-for i, page_url in enumerate(page_urls):
+for page_url in page_urls[1:]:
     # Build url out of base and current page url
     url = BASE_URL + page_url
 
@@ -64,8 +63,55 @@ for i, page_url in enumerate(page_urls):
     for j, hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title '})):
         hotel_urls.append(soup.find_all('a', attrs={'class': 'property_title '})[j]['href'])
 
+number_of_reviews_per_page = 10
+
+for hotel_url in hotel_urls[1:]:
+    # Build url out of base and current page url
+    url = BASE_URL + hotel_url
+
+    # Retrieve url content of the page url
+    content = urllib2.urlopen(url)
+
+    # Define parser
+    soup = BeautifulSoup(content, 'html.parser')
+
+    hotel_page_urls = list()
+
+    pagination_items = soup.find_all('a', attrs={'class': 'pageNum'})
+
+    # Scrape the highest pagination value of a hotel's pages
+    max = 0
+    for page in pagination_items:
+        if page.contents[0] > max:
+            max = page.contents[0]
+
+    number_of_pages = int(max)
+
+    for i in range(0, number_of_pages):
+        if i == 0:
+            # Append the already available first page url
+            page_urls.append(url)
+        else:
+            # Calculate the dash positions
+            occurrences_of_dash = [j for j in range(len(url)) if url.startswith('-', j)]
+
+            # Get the fourth dash position
+            fourth_dash_index = occurrences_of_dash[3]
+
+            # Each page contains 30 hotels
+            pagination = i * 10
+
+            # Build the current page url and append it to the list
+            hotel_page_url = url[:fourth_dash_index] + '-or' + str(pagination) + url[fourth_dash_index:] + '#REVIEW'
+            hotel_page_urls.append(hotel_page_url)
 
 
+for page in hotel_page_urls:
+    print(page)
+
+
+#https://www.tripadvisor.com/Hotel_Review-g293974-d1181320-Reviews-Osmanhan_Hotel-Istanbul.html#REVIEWS
+#https://www.tripadvisor.com/Hotel_Review-g293974-d1181320-Reviews-or10-Osmanhan_Hotel-Istanbul.html#REVIEWS
 
 # /Hotels-g293974-oa30-Istanbul-Hotels.html#ACCOM_OVERVIEW
 
