@@ -70,14 +70,14 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
     return hotel_urls
 
 
-# Visit each hotel url in the city
-def parse_pagination_and_review_urls_of_hotel():
-    for city_hotel_url in city_hotel_urls[0:2]:
-        # Build url out of base and current page url
-        HOTEL_URL = BASE_URL + city_hotel_url[1:]
+# Get all pagination urls of a hotel
+def parse_pagination_urls_of_hotel(hotel_urls, header):
+    # Initialize the list for the resulting urls
+    hotel_pagination_urls = list()
 
+    for hotel_url in hotel_urls[0:2]:
         # Retrieve url content of the page url
-        content = requests.get(HOTEL_URL, headers).content
+        content = requests.get(hotel_url, header).content
 
         # Define parser
         soup = BeautifulSoup(content, 'html.parser')
@@ -90,10 +90,10 @@ def parse_pagination_and_review_urls_of_hotel():
         for i in range(0, maximum_pagination_of_hotel):
             if i == 0:
                 # Append the already available first page url
-                hotel_pagination_urls.append(HOTEL_URL + '#REVIEWS')
+                hotel_pagination_urls.append(hotel_url + '#REVIEWS')
             else:
                 # Calculate the dash positions
-                occurrences_of_dash = [j for j in range(len(HOTEL_URL)) if HOTEL_URL.startswith('-', j)]
+                occurrences_of_dash = [j for j in range(len(hotel_url)) if hotel_url.startswith('-', j)]
 
                 # Get the fourth dash position
                 fourth_dash_index = occurrences_of_dash[3]
@@ -102,28 +102,31 @@ def parse_pagination_and_review_urls_of_hotel():
                 hotel_pagination = i * 10
 
                 # Build the current page url and append it to the list
-                hotel_page_url = HOTEL_URL[:fourth_dash_index] + '-or' + str(hotel_pagination) + HOTEL_URL[fourth_dash_index:] + '#REVIEWS'
+                hotel_page_url = hotel_url[:fourth_dash_index] + '-or' + str(hotel_pagination) + hotel_url[fourth_dash_index:] + '#REVIEWS'
                 hotel_pagination_urls.append(hotel_page_url)
 
-        for hotel_pagination_url in hotel_pagination_urls:
-            # Retrieve url content of the hotel pagination url
-            content = requests.get(hotel_pagination_url, headers).content
+    return hotel_pagination_urls
 
-            # Define parser
-            soup = BeautifulSoup(content, 'html.parser')
+def parse_review_urls_of_hotel():
+    for hotel_pagination_url in hotel_pagination_urls:
+        # Retrieve url content of the hotel pagination url
+        content = requests.get(hotel_pagination_url, headers).content
 
-            # Get all review containers of the current page
-            hotel_review_containers = soup.find_all('div', attrs={'class': 'basic_review'})
+        # Define parser
+        soup = BeautifulSoup(content, 'html.parser')
 
-            # Retrieve each review url of the current hotel pagination page
-            for hotel_review_container in hotel_review_containers:
-                quote = hotel_review_container.find('div', attrs={'class': 'quote'})
+        # Get all review containers of the current page
+        hotel_review_containers = soup.find_all('div', attrs={'class': 'basic_review'})
 
-                # Get the review url without base url
-                review_url = quote.find('a')['href'][1:]
+        # Retrieve each review url of the current hotel pagination page
+        for hotel_review_container in hotel_review_containers:
+            quote = hotel_review_container.find('div', attrs={'class': 'quote'})
 
-                # Append the complete review url to the list
-                hotel_review_urls.append(BASE_URL + review_url)
+            # Get the review url without base url
+            review_url = quote.find('a')['href'][1:]
+
+            # Append the complete review url to the list
+            hotel_review_urls.append(BASE_URL + review_url)
 
 # Main
 if __name__ == '__main__':
@@ -142,15 +145,12 @@ if __name__ == '__main__':
     number_of_reviews_per_page = 10
 
     # Initialize lists for later storing of urls
-    hotel_pagination_urls = list()
+    #hotel_pagination_urls = list()
     hotel_review_urls = list()
-
-    # Remove duplicate elements
-    #city_hotel_urls_unique = set(city_hotel_urls)
-    #city_hotel_urls = list(city_hotel_urls_unique)
 
     city_pagination_urls = parse_pagination_urls_of_city(CITY_DEFAULT_URL, CITY_URL, number_of_hotels_per_page, headers)
     city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
+    hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
     #parse_pagination_and_review_urls_of_hotel()
     #print(hotel_review_urls)
 
