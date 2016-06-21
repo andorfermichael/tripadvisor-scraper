@@ -107,6 +107,7 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
 
     return pagination_urls
 
+
 # Get all review urls of all given hotels
 def parse_review_urls_of_hotel(base_url, pagination_urls, header):
     # Initialize the list for the resulting urls
@@ -135,10 +136,90 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
     return review_urls
 
 
+# Parse all reviews of a city
 def parse_reviews_of_city(review_urls, user_base_url, header):
+    processed_hotels = list()
+
     for review_url in review_urls[0:1]:
-        review_information = parse_review_information(review_url, user_base_url, header)
-        print(review_information)
+        # Calculate the dash and point positions
+        occurrences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
+        occurrences_of_point = [j for j in range(len(review_url)) if review_url.startswith('.', j)]
+
+        # Get the hotel name out of the url
+        hotel_name = review_url[occurrences_of_dash[3] + 1:occurrences_of_point[2]]
+
+        if hotel_name not in processed_hotels:
+            processed_hotels.append(hotel_name)
+            hotel_information = parse_hotel_information(review_url, header)
+            print(hotel_information)
+
+        #review_information = parse_review_information(review_url, user_base_url, header)
+
+
+
+def parse_hotel_information(review_url, header):
+    # Initialize the dictionary for the hotel
+    hotel = dict()
+
+    # Retrieve url content of the review url
+    content = requests.get(review_url, header).content
+    print(review_url)
+
+    # Define parser
+    soup = BeautifulSoup(content, 'html.parser')
+
+    hotel['name'] = soup.find('a', attrs={'class': 'HEADING'}).text.strip()
+    hotel['overall-rating'] = soup.find('img', attrs={'class': 'sprite-rating_no_fill'})['alt'][0:1]
+    hotel['rank'] = soup.find('div', attrs={'class': 'slim_ranking'}).text.strip()
+
+    review_count = soup.find('h3', attrs={'class': 'reviews_header'}).text
+    occurrences_of_spaces = [j for j in range(len(review_count)) if review_count.startswith(' ', j)]
+    hotel['reviews-count'] = review_count[0:occurrences_of_spaces[0]]
+
+    review_filter = soup.find('fieldset', attrs={'class': 'review_filter_lodging'})
+    star_filter_items = review_filter.find('div', attrs={'class': 'col2of2'}).find_all('div', attrs={'class': 'wrap'})
+    reason_filter_items = review_filter.find('div', attrs={'class': 'trip_type'}).find_all('div', attrs={'class': 'segment'})
+    star_filter_string = ''
+    reason_filter_string = ''
+
+    for star_filter_item in star_filter_items:
+        description = star_filter_item.find('span', attrs={'class': 'text'}).text
+        count = star_filter_item.find('span', attrs={'class': 'compositeCount'}).text
+        star_filter_string += description + ' (' + count + ') - '
+
+    for reason_filter_item in reason_filter_items:
+        description = reason_filter_item.find('div', attrs={'class': 'filter_selection'}).text
+        count = reason_filter_item.find('div', attrs={'class': 'value'}).text
+        reason_filter_string += description + ' (' + count + ') - '
+
+    hotel['star-filter'] = star_filter_string[0:-3]
+    hotel['reason-filter'] = reason_filter_string[0:-3]
+
+    language_items = soup.find('select', attrs={'id': 'filterLang'}).find_all('option')[:-1]
+    languages = ''
+
+    for language_item in language_items:
+        languages += language_item.text.replace('first', '').strip() + ', '
+
+    hotel['reviewer-languages'] = languages[:-2]
+
+    hotel['address'] = soup.find('span', attrs={'class': 'format_address'}).text
+
+    amenity_items = soup.find('div', attrs={'class': 'indent'}).find_all('span', attrs={'class': 'amenity'})
+    amenities = ''
+
+    for amenity_item in amenity_items:
+        amenities += amenity_item.text + ', '
+
+    hotel['amenities'] = amenities[:-2]
+
+    hotel['stars'] = soup.find('div', attrs={'class': 'stars'}).text.replace('Hotel Class:', '').strip()[0:1]
+
+    hotel['room-count'] = soup.find('span', attrs={'class': 'tabs_num_rooms'}).text.strip()
+
+    hotel['description'] = soup.find('span', attrs={'class': 'descriptive_text'}).text.strip() + soup.find('span', attrs={'class': 'descriptive_text_last'}).text.strip()
+
+    return hotel
 
 
 # Parse all information of a review
@@ -163,7 +244,7 @@ def parse_review_information(review_url, user_base_url, header):
 
     # Parse review information
 
-    review['title'] = entry_container.find('div', attrs={'class': 'quote'}).string
+    review['title'] = entry_container.find('div', attrs={'class': 'quote'}).text
     review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1]
     review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
     review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text
@@ -233,6 +314,7 @@ def parse_review_information(review_url, user_base_url, header):
     reviewer = parse_reviewer_information(user_name, user_base_url, header)
 
     return [review, reviewer]
+
 
 # Parse the profile information of a reviewer
 def parse_reviewer_information(user_name, user_base_url, header):
@@ -335,7 +417,7 @@ if __name__ == '__main__':
     city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
     hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
     city_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
-    print(city_review_urls)
+    #print(city_review_urls)
 
     # Store all reviews of the city
     parse_reviews_of_city(city_review_urls, USER_BASE_URL, headers)
