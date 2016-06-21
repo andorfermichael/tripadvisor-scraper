@@ -136,99 +136,103 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
 
 
 def parse_reviews_of_city(review_urls, user_base_url, header):
+    for review_url in review_urls[0:1]:
+        review_information = parse_review_information(review_url, user_base_url, header)
+        print(review_information)
+
+
+# Parse all information of a review
+def parse_review_information(review_url, user_base_url, header):
     # Initialize the dictionary for the review
     review = dict()
 
-    for review_url in review_urls[0:1]:
-        # Retrieve url content of the review url
-        content = requests.get(review_url, header).content
+    # Retrieve url content of the review url
+    content = requests.get(review_url, header).content
 
-        # Define parser
-        soup = BeautifulSoup(content, 'html.parser')
+    # Define parser
+    soup = BeautifulSoup(content, 'html.parser')
 
-        # Parse the container which contains the whole review content and meta information
-        review_container = soup.find('div', attrs={'class': 'reviewSelector'})
+    # Parse the container which contains the whole review content and meta information
+    review_container = soup.find('div', attrs={'class': 'reviewSelector'})
 
-        # Parse the container which contains the user information
-        user_container = review_container.find('div', attrs={'class': 'col1of2'})
+    # Parse the container which contains the user information
+    user_container = review_container.find('div', attrs={'class': 'col1of2'})
 
-        # Parse the container which contains the review information
-        entry_container = review_container.find('div', attrs={'class': 'col2of2'})
+    # Parse the container which contains the review information
+    entry_container = review_container.find('div', attrs={'class': 'col2of2'})
 
-        # Parse review information
+    # Parse review information
 
-        review['title'] = entry_container.find('div', attrs={'class': 'quote'}).string
-        review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1]
-        review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
-        review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text
+    review['title'] = entry_container.find('div', attrs={'class': 'quote'}).string
+    review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1]
+    review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
+    review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text
 
-        try:
-            stay = entry_container.find('span', attrs={'class': 'recommend-titleInline'}).text
-            occurences_of_colon = [j for j in range(len(stay)) if stay.startswith(',', j)]
-            review['time'] = stay[0:occurences_of_colon[0]].replace('Stayed ', '')
-            review['reason'] = stay[occurences_of_colon[0] + 2:].replace('traveled ', '')
-        except:
-            review['time'] = 'n.a.'
-            review['reason'] = 'n.a.'
+    try:
+        stay = entry_container.find('span', attrs={'class': 'recommend-titleInline'}).text
+        occurences_of_colon = [j for j in range(len(stay)) if stay.startswith(',', j)]
+        review['time'] = stay[0:occurences_of_colon[0]].replace('Stayed ', '')
+        review['reason'] = stay[occurences_of_colon[0] + 2:].replace('traveled ', '')
+    except:
+        review['time'] = 'n.a.'
+        review['reason'] = 'n.a.'
 
-        try:
-            review['helpful-votes'] = entry_container.find('span', attrs={'class': 'numHlpIn'}).text
-        except:
-            review['helpful-votes'] = 0
+    try:
+        review['helpful-votes'] = entry_container.find('span', attrs={'class': 'numHlpIn'}).text
+    except:
+        review['helpful-votes'] = 0
 
-        try:
-            review['room-tip'] = entry_container.find('div', attrs={'class': 'inlineRoomTip'}).text
-        except:
-            review['room-tip'] = 'n.a.'
+    try:
+        review['room-tip'] = entry_container.find('div', attrs={'class': 'inlineRoomTip'}).text
+    except:
+        review['room-tip'] = 'n.a.'
 
-        try:
-            # Set all to n.a. per default so that it has an informative value in each case
-            review['value-rating'] = 'n.a.'
-            review['location-rating'] = 'n.a.'
-            review['rooms-rating'] = 'n.a.'
-            review['cleanliness-rating'] = 'n.a.'
-            review['service-rating'] = 'n.a.'
-            review['business-rating'] = 'n.a.'
-            review['check-rating'] = 'n.a.'
-            review['sleep-rating'] = 'n.a.'
+    try:
+        # Set all to n.a. per default so that it has an informative value in each case
+        review['value-rating'] = 'n.a.'
+        review['location-rating'] = 'n.a.'
+        review['rooms-rating'] = 'n.a.'
+        review['cleanliness-rating'] = 'n.a.'
+        review['service-rating'] = 'n.a.'
+        review['business-rating'] = 'n.a.'
+        review['check-rating'] = 'n.a.'
+        review['sleep-rating'] = 'n.a.'
 
-            recommendation_columns = entry_container.find('ul', attrs={'class': 'recommend'}).find('li').find_all('ul', attrs={'class': 'recommend-column'})
+        recommendation_columns = entry_container.find('ul', attrs={'class': 'recommend'}).find('li').find_all('ul',attrs={'class': 'recommend-column'})
 
-            for column in recommendation_columns:
-                recommend_answers = column.find_all('li', attrs={'class': 'recommend-answer'})
+        for column in recommendation_columns:
+            recommend_answers = column.find_all('li', attrs={'class': 'recommend-answer'})
 
-                for answer in recommend_answers:
-                    recommend_description = answer.find('div', attrs={'class': 'recommend-description'}).text
-                    rating = answer.find('img', attrs={'class': 'sprite-rating_ss_fill'})['alt'][0:1]
+            for answer in recommend_answers:
+                recommend_description = answer.find('div', attrs={'class': 'recommend-description'}).text
+                rating = answer.find('img', attrs={'class': 'sprite-rating_ss_fill'})['alt'][0:1]
 
-                    if recommend_description == 'Value':
-                        review['value-rating'] = rating
-                    elif recommend_description == 'Location':
-                        review['location-rating'] = rating
-                    elif recommend_description == 'Rooms':
-                        review['rooms-rating'] = rating
-                    elif recommend_description == 'Cleanliness':
-                        review['cleanliness-rating'] = rating
-                    elif recommend_description == 'Service':
-                        review['service-rating'] = rating
-                    elif recommend_description == 'Business service (e.g., internet access)':
-                        review['business-rating'] = rating
-                    elif recommend_description == 'Check in / front desk':
-                        review['check-rating'] = rating
-                    elif recommend_description == 'Sleep Quality':
-                        review['sleep-rating'] = rating
+                if recommend_description == 'Value':
+                    review['value-rating'] = rating
+                elif recommend_description == 'Location':
+                    review['location-rating'] = rating
+                elif recommend_description == 'Rooms':
+                    review['rooms-rating'] = rating
+                elif recommend_description == 'Cleanliness':
+                    review['cleanliness-rating'] = rating
+                elif recommend_description == 'Service':
+                    review['service-rating'] = rating
+                elif recommend_description == 'Business service (e.g., internet access)':
+                    review['business-rating'] = rating
+                elif recommend_description == 'Check in / front desk':
+                    review['check-rating'] = rating
+                elif recommend_description == 'Sleep Quality':
+                    review['sleep-rating'] = rating
 
-        except:
-            # Log here
-            print("")
+    except:
+        # Log here
+        print("")
 
-        print(review)
+    # Parse user information
+    user_name = user_container.find('div', attrs={'class': 'username'}).find('span', attrs={'class': 'scrname'}).text
+    reviewer = parse_reviewer_information(user_name, user_base_url, header)
 
-        # Parse user information
-        user_name = user_container.find('div', attrs={'class': 'username'}).find('span', attrs={'class': 'scrname'}).text
-        reviewer = parse_reviewer_information(user_name, user_base_url, header)
-
-        print(reviewer)
+    return [review, reviewer]
 
 # Parse the profile information of a reviewer
 def parse_reviewer_information(user_name, user_base_url, header):
