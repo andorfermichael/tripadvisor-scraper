@@ -136,6 +136,9 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
 
 
 def parse_reviews_of_city(review_urls, user_base_url, header):
+    # Initialize the dictionary for the review
+    review = dict()
+
     for review_url in review_urls[0:1]:
         # Retrieve url content of the review url
         content = requests.get(review_url, header).content
@@ -152,13 +155,78 @@ def parse_reviews_of_city(review_urls, user_base_url, header):
         # Parse the container which contains the review information
         entry_container = review_container.find('div', attrs={'class': 'col2of2'})
 
+        # Parse review information
+
+        review['title'] = entry_container.find('div', attrs={'class': 'quote'}).string
+        review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1]
+        review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
+        review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text
+
+        try:
+            stay = entry_container.find('span', attrs={'class': 'recommend-titleInline'}).text
+            occurences_of_colon = [j for j in range(len(stay)) if stay.startswith(',', j)]
+            review['time'] = stay[0:occurences_of_colon[0]].replace('Stayed ', '')
+            review['reason'] = stay[occurences_of_colon[0] + 2:].replace('traveled ', '')
+        except:
+            review['time'] = 'n.a.'
+            review['reason'] = 'n.a.'
+
+        try:
+            review['helpful-votes'] = entry_container.find('span', attrs={'class': 'numHlpIn'}).text
+        except:
+            review['helpful-votes'] = 0
+
+        try:
+            review['room-tip'] = entry_container.find('div', attrs={'class': 'inlineRoomTip'}).text
+        except:
+            review['room-tip'] = 'n.a.'
+
+        try:
+            # Set all to n.a. per default so that it has an informative value in each case
+            review['value-rating'] = 'n.a.'
+            review['location-rating'] = 'n.a.'
+            review['rooms-rating'] = 'n.a.'
+            review['cleanliness-rating'] = 'n.a.'
+            review['service-rating'] = 'n.a.'
+            review['business-rating'] = 'n.a.'
+            review['check-rating'] = 'n.a.'
+            review['sleep-rating'] = 'n.a.'
+
+            recommendation_columns = entry_container.find('ul', attrs={'class': 'recommend'}).find('li').find_all('ul', attrs={'class': 'recommend-column'})
+
+            for column in recommendation_columns:
+                recommend_answers = column.find_all('li', attrs={'class': 'recommend-answer'})
+
+                for answer in recommend_answers:
+                    recommend_description = answer.find('div', attrs={'class': 'recommend-description'}).text
+                    rating = answer.find('img', attrs={'class': 'sprite-rating_ss_fill'})['alt'][0:1]
+
+                    if recommend_description == 'Value':
+                        review['value-rating'] = rating
+                    elif recommend_description == 'Location':
+                        review['location-rating'] = rating
+                    elif recommend_description == 'Rooms':
+                        review['rooms-rating'] = rating
+                    elif recommend_description == 'Cleanliness':
+                        review['cleanliness-rating'] = rating
+                    elif recommend_description == 'Service':
+                        review['service-rating'] = rating
+                    elif recommend_description == 'Business service (e.g., internet access)':
+                        review['business-rating'] = rating
+                    elif recommend_description == 'Check in / front desk':
+                        review['check-rating'] = rating
+                    elif recommend_description == 'Sleep Quality':
+                        review['sleep-rating'] = rating
+
+        except:
+            # Log here
+            print("")
+
+        print(review)
+
         # Parse user information
-        user_name = user_container.find('div', attrs={'class': 'username'}).find('span', attrs={'class': 'scrname'}).string
+        user_name = user_container.find('div', attrs={'class': 'username'}).find('span', attrs={'class': 'scrname'}).text
         reviewer = parse_reviewer_information(user_name, user_base_url, header)
-
-
-        #user_location = user_container.find('div', attrs={'class': 'location'}).string
-        #user_level = user_container.find('div', attrs={'class': 'levelBadge'}).
 
         print(reviewer)
 
@@ -179,24 +247,28 @@ def parse_reviewer_information(user_name, user_base_url, header):
     user['name'] = user_name
 
     try:
-        user['since'] = soup.find('div', attrs={'class': 'ageSince'}).find_all('p')[0].string
+        user['level'] = soup.find('div', attrs={'class': 'level'}).find('span').text
+    except:
+        user['level'] = 'n.a'
+
+    try:
+        user['since'] = soup.find('div', attrs={'class': 'ageSince'}).find_all('p')[0].text
     except:
         user['since'] = 'n.a.'
 
     try:
-        user['demographic'] = soup.find('div', attrs={'class': 'ageSince'}).find_all('p')[1].string
+        user['demographic'] = soup.find('div', attrs={'class': 'ageSince'}).find_all('p')[1].text
     except:
         user['demographic'] = 'n.a.'
 
     try:
-        user['hometown'] = soup.find('div', attrs={'class': 'hometown'}).find('p').string
+        user['hometown'] = soup.find('div', attrs={'class': 'hometown'}).find('p').text
     except:
         user['hometown'] = 'n.a.'
 
     try:
         number_of_reviews = soup.find_all('a', attrs={'data-filter': 'REVIEWS_ALL'})[0].contents[0]
         occurences_of_space = [j for j in range(len(number_of_reviews)) if number_of_reviews.startswith(' ', j)]
-        print(occurences_of_space)
         user['reviews'] = number_of_reviews[0:occurences_of_space[0]]
     except:
         user['reviews'] = 'n.a.'
@@ -221,6 +293,17 @@ def parse_reviewer_information(user_name, user_base_url, header):
         user['helpfuls'] = number_of_helpful_votes[0:occurences_of_space[0]]
     except:
         user['helpfuls'] = 'n.a.'
+
+    try:
+        tags = ''
+        tag_bubbles = soup.find_all('div', attrs={'class': 'tagBlock'}).find_all('div', attrs={'class': 'tagBubble'})
+
+        for tag_bubble in tag_bubbles:
+            tags += tag_bubble.text + ', '
+
+        user['tags'] = tags
+    except:
+        user['tags'] = 'n.a.'
 
     return user
 
