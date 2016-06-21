@@ -21,7 +21,7 @@ def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
     soup = BeautifulSoup(content, 'html.parser')
 
     # Scrape number of pages (pagination of hotels in the city)
-    number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
+    number_of_pages_in_city = 1#soup.find('a', attrs={'class': 'last'}).contents[0]
 
     for i in range(0, int(number_of_pages_in_city)):
         if i == 0:
@@ -49,7 +49,7 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
     # Initialize the list for the resulting urls
     hotel_urls = list()
 
-    for pagination_url in pagination_urls:
+    for pagination_url in pagination_urls[0:1]:
         # Build url out of base and current page url
         city_pagination_url = base_url + pagination_url
 
@@ -75,7 +75,7 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
     # Initialize the list for the resulting urls
     pagination_urls = list()
 
-    for hotel_url in hotel_urls:
+    for hotel_url in hotel_urls[0:1]:
         # Retrieve url content of the page url
         content = requests.get(hotel_url, header).content
 
@@ -112,7 +112,7 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
     # Initialize the list for the resulting urls
     review_urls = list()
 
-    for pagination_url in pagination_urls:
+    for pagination_url in pagination_urls[0:1]:
         # Retrieve url content of the hotel pagination url
         content = requests.get(pagination_url, header).content
 
@@ -134,6 +134,97 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
 
     return review_urls
 
+
+def parse_reviews_of_city(review_urls, user_base_url, header):
+    for review_url in review_urls[0:1]:
+        # Retrieve url content of the review url
+        content = requests.get(review_url, header).content
+
+        # Define parser
+        soup = BeautifulSoup(content, 'html.parser')
+
+        # Parse the container which contains the whole review content and meta information
+        review_container = soup.find('div', attrs={'class': 'reviewSelector'})
+
+        # Parse the container which contains the user information
+        user_container = review_container.find('div', attrs={'class': 'col1of2'})
+
+        # Parse the container which contains the review information
+        entry_container = review_container.find('div', attrs={'class': 'col2of2'})
+
+        # Parse user information
+        user_name = user_container.find('div', attrs={'class': 'username'}).find('span', attrs={'class': 'scrname'}).string
+        reviewer = parse_reviewer_information(user_name, user_base_url, header)
+
+
+        #user_location = user_container.find('div', attrs={'class': 'location'}).string
+        #user_level = user_container.find('div', attrs={'class': 'levelBadge'}).
+
+        print(reviewer)
+
+# Parse the profile information of a reviewer
+def parse_reviewer_information(user_name, user_base_url, header):
+    # Initialize the dictionary for the user
+    user = dict()
+
+    # Define the user profile url
+    profile_url = user_base_url + user_name
+
+    # Retrieve url content of the user url
+    content = requests.get(profile_url, header).content
+
+    # Define parser
+    soup = BeautifulSoup(content, 'html.parser')
+
+    user['name'] = user_name
+
+    try:
+        user['since'] = soup.find('div', attrs={'class': 'ageSince'}).find_all('p')[0].string
+    except:
+        user['since'] = 'n.a.'
+
+    try:
+        user['demographic'] = soup.find('div', attrs={'class': 'ageSince'}).find_all('p')[1].string
+    except:
+        user['demographic'] = 'n.a.'
+
+    try:
+        user['hometown'] = soup.find('div', attrs={'class': 'hometown'}).find('p').string
+    except:
+        user['hometown'] = 'n.a.'
+
+    try:
+        number_of_reviews = soup.find_all('a', attrs={'data-filter': 'REVIEWS_ALL'})[0].contents[0]
+        occurences_of_space = [j for j in range(len(number_of_reviews)) if number_of_reviews.startswith(' ', j)]
+        print(occurences_of_space)
+        user['reviews'] = number_of_reviews[0:occurences_of_space[0]]
+    except:
+        user['reviews'] = 'n.a.'
+
+    try:
+        number_of_ratings = soup.find('a', attrs={'data-filter': 'RATINGS_ALL'}).contents[0]
+        occurences_of_space = [j for j in range(len(number_of_ratings)) if number_of_ratings.startswith(' ', j)]
+        user['ratings'] = number_of_ratings[0:occurences_of_space[0]]
+    except:
+        user['ratings'] = 'n.a.'
+
+    try:
+        number_of_photos = soup.find('a', attrs={'data-filter': 'PHOTOS_ALL'}).contents[0]
+        occurences_of_space = [j for j in range(len(number_of_photos)) if number_of_photos.startswith(' ', j)]
+        user['photos'] = number_of_photos[0:occurences_of_space[0]]
+    except:
+        user['photos'] = 'n.a.'
+
+    try:
+        number_of_helpful_votes = soup.find_all('a', attrs={'data-filter': 'REVIEWS_ALL'})[1].contents[0]
+        occurences_of_space = [j for j in range(len(number_of_helpful_votes)) if number_of_helpful_votes.startswith(' ', j)]
+        user['helpfuls'] = number_of_helpful_votes[0:occurences_of_space[0]]
+    except:
+        user['helpfuls'] = 'n.a.'
+
+    return user
+
+
 # Main
 if __name__ == '__main__':
     # Define user agent
@@ -146,6 +237,8 @@ if __name__ == '__main__':
     CITY_DEFAULT_URL = 'Hotels-g293974-Istanbul-Hotels.html'
     CITY_URL = BASE_URL + CITY_DEFAULT_URL
 
+    USER_BASE_URL = 'https://www.tripadvisor.com/members/'
+
     # Define items per page
     number_of_hotels_per_page = 30
     number_of_reviews_per_page = 10
@@ -154,9 +247,11 @@ if __name__ == '__main__':
     city_pagination_urls = parse_pagination_urls_of_city(CITY_DEFAULT_URL, CITY_URL, number_of_hotels_per_page, headers)
     city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
     hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
-    hotel_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
+    city_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
+    print(city_review_urls)
 
-
+    # Store all reviews of the city
+    parse_reviews_of_city(city_review_urls, USER_BASE_URL, headers)
 
 
 #https://www.tripadvisor.com/Hotel_Review-g293974-d1181320-Reviews-Osmanhan_Hotel-Istanbul.html#REVIEWS
