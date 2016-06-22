@@ -7,6 +7,7 @@ import requests
 import time
 from functools import wraps
 import os
+import csv
 from bs4 import BeautifulSoup
 
 
@@ -143,9 +144,8 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
     hotel_information = dict()
 
     # Create a folder for the current scrapping session
-    create_session_folder(city_default_url)
+    city_directory_path = create_session_directory(city_default_url)
 
-'''
     for review_url in review_urls[0:1]:
         # Calculate the dash and point positions
         occurrences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
@@ -158,25 +158,61 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
         if hotel_name not in processed_hotels:
             processed_hotels.append(hotel_name)
             hotel_information = parse_hotel_information(review_url, header)
-            print(hotel_information)
+            hotel_directory_path = create_hotel_directory(hotel_information['name'].replace(' ', '_').lower(), city_directory_path)
+            store_hotel_data(hotel_information, hotel_directory_path)
+            #print(hotel_information)
 
         # Parse review information
-        review_information = parse_review_information(review_url, user_base_url, header)
-'''
+        #review_information = parse_review_information(review_url, user_base_url, header)
+
     #store_data(hotel_information, review_information, city_default_url)
 
 
-# Creates a folder for the session
-def create_session_folder(city_default_url):
+
+# Creates a csv file for a hotel and stores the hotel information inside
+def store_hotel_data(hotel_data, hotel_directory_path):
+    with open(hotel_directory_path + '/' + hotel_data['name'].replace(' ', '_').lower() + '-information.csv', 'w', newline='') as file:
+        # Setup a writer
+        csvwriter = csv.writer(file, delimiter='|')
+
+        # Write headlines into the file
+        csvwriter.writerow(['Name', 'Address', 'Description' , 'Stars', 'Room Count ', 'Amenities', 'TripAdvisor City Rank', 'Overall Rating' , 'Review Count', 'Review Rating Count', 'Review Reason Count', 'Reviewer Languages'])
+
+        # Build the record
+        record = hotel_data['name'] + '|' + hotel_data['address'] + '|' + hotel_data['description'] + '|' + hotel_data['stars'] + '|' + \
+                 hotel_data['room-count'] + '|' + hotel_data['amenities'] + '|' + hotel_data['rank'] + '|' + \
+                 hotel_data['overall-rating'] + '|' + hotel_data['review-count'] + '|' + hotel_data['star-filter'] + '|' + \
+                 hotel_data['reason-filter'] + '|' + hotel_data['reviewer-languages']
+
+        # Write the data into the file
+        csvwriter.writerow([record])
+
+# Creates a directory for a hotel
+def create_hotel_directory(hotel_name, city_directory_name):
+    # Build directory name
+    directory_path = city_directory_name + '/' + hotel_name
+
+    # Create the folder
+    os.makedirs(directory_path)
+
+    return directory_path
+
+# Creates a directory for a session
+def create_session_directory(city_default_url):
     # Get the current time
-    timestr = time.strftime("%Y%m%d-%H%M%S")
+    timestr = time.strftime('%Y%m%d-%H%M%S')
 
     # Get the city name from the url
     occurrences_of_dash = [j for j in range(len(city_default_url)) if city_default_url.startswith('-', j)]
     city_name = city_default_url[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
 
+    # Build directory name
+    directory_path = 'data/' + timestr + '-' + city_name
+
     # Create the folder
-    os.makedirs('data/' + timestr + '-' + city_name)
+    os.makedirs(directory_path)
+
+    return directory_path
 
 
 def parse_hotel_information(review_url, header):
@@ -190,12 +226,12 @@ def parse_hotel_information(review_url, header):
     soup = BeautifulSoup(content, 'html.parser')
 
     hotel['name'] = soup.find('a', attrs={'class': 'HEADING'}).text.strip()
-    hotel['overall-rating'] = soup.find('img', attrs={'class': 'sprite-rating_no_fill'})['alt'][0:1]
+    hotel['overall-rating'] = soup.find('img', attrs={'class': 'sprite-rating_no_fill'})['alt'][0:1] + ' stars'
     hotel['rank'] = soup.find('div', attrs={'class': 'slim_ranking'}).text.strip()
 
     review_count = soup.find('h3', attrs={'class': 'reviews_header'}).text
     occurrences_of_spaces = [j for j in range(len(review_count)) if review_count.startswith(' ', j)]
-    hotel['reviews-count'] = review_count[0:occurrences_of_spaces[0]]
+    hotel['review-count'] = review_count[0:occurrences_of_spaces[0]]
 
     review_filter = soup.find('fieldset', attrs={'class': 'review_filter_lodging'})
     star_filter_items = review_filter.find('div', attrs={'class': 'col2of2'}).find_all('div', attrs={'class': 'wrap'})
@@ -224,21 +260,27 @@ def parse_hotel_information(review_url, header):
 
     hotel['reviewer-languages'] = languages[:-2]
 
-    hotel['address'] = soup.find('span', attrs={'class': 'format_address'}).text
+    hotel['address'] = soup.find('span', attrs={'class': 'format_address'}).text.replace('|', '-')
 
-    amenity_items = soup.find('div', attrs={'class': 'indent'}).find_all('span', attrs={'class': 'amenity'})
-    amenities = ''
+    try:
+        amenity_items = soup.find('div', attrs={'class': 'indent'}).find_all('span', attrs={'class': 'amenity'})
+        amenities = ''
 
-    for amenity_item in amenity_items:
-        amenities += amenity_item.text + ', '
+        for amenity_item in amenity_items:
+            amenities += amenity_item.text + ', '
 
-    hotel['amenities'] = amenities[:-2]
+        hotel['amenities'] = amenities[:-2]
+    except:
+        hotel['amenities'] = 'n.a.'
 
     hotel['stars'] = soup.find('div', attrs={'class': 'stars'}).text.replace('Hotel Class:', '').strip()[0:1]
 
     hotel['room-count'] = soup.find('span', attrs={'class': 'tabs_num_rooms'}).text.strip()
 
-    hotel['description'] = soup.find('span', attrs={'class': 'descriptive_text'}).text.strip() + soup.find('span', attrs={'class': 'descriptive_text_last'}).text.strip()
+    try:
+        hotel['description'] = soup.find('span', attrs={'class': 'descriptive_text'}).text.strip() + soup.find('span', attrs={'class': 'descriptive_text_last'}).text.strip()
+    except:
+        hotel['n.a.']
 
     return hotel
 
