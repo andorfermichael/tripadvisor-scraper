@@ -6,6 +6,7 @@ import sys
 import requests
 import time
 from functools import wraps
+import os
 from bs4 import BeautifulSoup
 
 
@@ -137,9 +138,14 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
 
 
 # Parse all reviews of a city
-def parse_reviews_of_city(review_urls, user_base_url, header):
+def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
     processed_hotels = list()
+    hotel_information = dict()
 
+    # Create a folder for the current scrapping session
+    create_session_folder(city_default_url)
+
+'''
     for review_url in review_urls[0:1]:
         # Calculate the dash and point positions
         occurrences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
@@ -148,13 +154,29 @@ def parse_reviews_of_city(review_urls, user_base_url, header):
         # Get the hotel name out of the url
         hotel_name = review_url[occurrences_of_dash[3] + 1:occurrences_of_point[2]]
 
+        # Only process hotel information once
         if hotel_name not in processed_hotels:
             processed_hotels.append(hotel_name)
             hotel_information = parse_hotel_information(review_url, header)
             print(hotel_information)
 
-        #review_information = parse_review_information(review_url, user_base_url, header)
+        # Parse review information
+        review_information = parse_review_information(review_url, user_base_url, header)
+'''
+    #store_data(hotel_information, review_information, city_default_url)
 
+
+# Creates a folder for the session
+def create_session_folder(city_default_url):
+    # Get the current time
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+
+    # Get the city name from the url
+    occurrences_of_dash = [j for j in range(len(city_default_url)) if city_default_url.startswith('-', j)]
+    city_name = city_default_url[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
+
+    # Create the folder
+    os.makedirs('data/' + timestr + '-' + city_name)
 
 
 def parse_hotel_information(review_url, header):
@@ -163,7 +185,6 @@ def parse_hotel_information(review_url, header):
 
     # Retrieve url content of the review url
     content = requests.get(review_url, header).content
-    print(review_url)
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
@@ -420,7 +441,7 @@ if __name__ == '__main__':
     #print(city_review_urls)
 
     # Store all reviews of the city
-    parse_reviews_of_city(city_review_urls, USER_BASE_URL, headers)
+    parse_reviews_of_city(city_review_urls, CITY_DEFAULT_URL, USER_BASE_URL, headers)
 
 
 #https://www.tripadvisor.com/Hotel_Review-g293974-d1181320-Reviews-Osmanhan_Hotel-Istanbul.html#REVIEWS
