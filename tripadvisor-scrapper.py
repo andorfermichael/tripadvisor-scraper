@@ -143,40 +143,70 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
     processed_hotels = list()
     hotel_information = dict()
 
-    # Create a folder for the current scrapping session
+    # Create a directory for the current scrapping session
     city_directory_path = create_session_directory(city_default_url)
 
-    for review_url in review_urls[0:1]:
+    hotel_directory_path = ''
+
+    for review_url in review_urls[0:2]:
         # Calculate the dash and point positions
         occurrences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
         occurrences_of_point = [j for j in range(len(review_url)) if review_url.startswith('.', j)]
 
         # Get the hotel name out of the url
-        hotel_name = review_url[occurrences_of_dash[3] + 1:occurrences_of_point[2]]
+        hotel_name = review_url[occurrences_of_dash[3] + 1:occurrences_of_point[2]].replace(' ', '_').lower()
 
         # Only process hotel information once
         if hotel_name not in processed_hotels:
             processed_hotels.append(hotel_name)
             hotel_information = parse_hotel_information(review_url, header)
-            hotel_directory_path = create_hotel_directory(hotel_information['name'].replace(' ', '_').lower(), city_directory_path)
-            store_hotel_data(hotel_information, hotel_directory_path)
-            #print(hotel_information)
+            hotel_directory_path = create_hotel_directory(hotel_name, city_directory_path)
+            store_hotel_data_in_csv(hotel_information, hotel_directory_path)
 
         # Parse review information
-        #review_information = parse_review_information(review_url, user_base_url, header)
+        review_information = parse_review_information(review_url, user_base_url, header)
 
-    #store_data(hotel_information, review_information, city_default_url)
+        # Store review information
+        store_review_data_in_csv(hotel_name, review_information, hotel_directory_path)
 
 
+# Creates a csv file for a hotel's reviews and stores the reviews inside
+def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path):
+    with open(hotel_directory_path + '/' + hotel_name + '-reviews.csv', 'a', newline='') as file:
+        # Setup a writer
+        csvwriter = csv.writer(file, delimiter='|')
+
+        # Write headlines into the file
+        csvwriter.writerow(['Title', 'Text', 'Room Tip', 'Publication Date',
+                            'Overall Rating', 'Value Rating', 'Location Rating',
+                            'Rooms Rating', 'Cleanliness Rating', 'Service Rating',
+                            'Business Rating', 'Check-In Rating', 'Sleep Quality Rating',
+                            'Stay', 'Reason', 'Helpful Votes Count', 'Reviewer', 'Level', 'Member Since',
+                            'Hometown', 'Demographics', 'Review Count', 'Rating Count', 'Photo Count',
+                            'Reviewer Helpful Votes Count', 'Reviewer Tags'
+                            ])
+
+        # Build the record
+        record = review_data[0]['title'] + '|' + review_data[0]['text'] + '|' + review_data[0]['room-tip'] + '|' + \
+                 review_data[0]['date'] + '|' + review_data[0]['rating'] + '|' + review_data[0]['value-rating'] + '|' + \
+                 review_data[0]['location-rating'] + '|' + review_data[0]['rooms-rating'] + '|' + review_data[0]['cleanliness-rating'] + '|' + \
+                 review_data[0]['service-rating'] + '|' + review_data[0]['business-rating'] + '|' + review_data[0]['check-rating'] + '|' + \
+                 review_data[0]['helpful-votes'] + '|' + review_data[0]['sleep-rating'] + '|' + review_data[0]['time'] + '|' + review_data[0]['reason'] + '|' + \
+                 review_data[1]['name'] + '|' + review_data[1]['level'] + '|' + review_data[1]['since'] + '|' + \
+                 review_data[1]['hometown'] + '|' + review_data[1]['demographic'] + '|' + review_data[1]['reviews'] + '|' + \
+                 review_data[1]['ratings'] + '|' + review_data[1]['helpfuls'] + '|' + review_data[1]['tags']
+
+        # Write the data into the file
+        csvwriter.writerow([record])
 
 # Creates a csv file for a hotel and stores the hotel information inside
-def store_hotel_data(hotel_data, hotel_directory_path):
+def store_hotel_data_in_csv(hotel_data, hotel_directory_path):
     with open(hotel_directory_path + '/' + hotel_data['name'].replace(' ', '_').lower() + '-information.csv', 'w', newline='') as file:
         # Setup a writer
         csvwriter = csv.writer(file, delimiter='|')
 
         # Write headlines into the file
-        csvwriter.writerow(['Name', 'Address', 'Description' , 'Stars', 'Room Count ', 'Amenities', 'TripAdvisor City Rank', 'Overall Rating' , 'Review Count', 'Review Rating Count', 'Review Reason Count', 'Reviewer Languages'])
+        csvwriter.writerow(['Name', 'Address', 'Description', 'Stars', 'Room Count', 'Amenities', 'TripAdvisor City Rank', 'Overall Rating' , 'Review Count', 'Review Rating Count', 'Review Reason Count', 'Reviewer Languages'])
 
         # Build the record
         record = hotel_data['name'] + '|' + hotel_data['address'] + '|' + hotel_data['description'] + '|' + hotel_data['stars'] + '|' + \
@@ -280,7 +310,7 @@ def parse_hotel_information(review_url, header):
     try:
         hotel['description'] = soup.find('span', attrs={'class': 'descriptive_text'}).text.strip() + soup.find('span', attrs={'class': 'descriptive_text_last'}).text.strip()
     except:
-        hotel['n.a.']
+        hotel['description'] = 'n.a.'
 
     return hotel
 
@@ -306,11 +336,10 @@ def parse_review_information(review_url, user_base_url, header):
     entry_container = review_container.find('div', attrs={'class': 'col2of2'})
 
     # Parse review information
-
-    review['title'] = entry_container.find('div', attrs={'class': 'quote'}).text
-    review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1]
+    review['title'] = entry_container.find('div', attrs={'class': 'quote'}).text.strip().replace('“', '').replace('”', '')
+    review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1] + ' stars'
     review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
-    review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text
+    review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text.replace('\n', ' ')
 
     try:
         stay = entry_container.find('span', attrs={'class': 'recommend-titleInline'}).text
@@ -327,7 +356,7 @@ def parse_review_information(review_url, user_base_url, header):
         review['helpful-votes'] = 0
 
     try:
-        review['room-tip'] = entry_container.find('div', attrs={'class': 'inlineRoomTip'}).text
+        review['room-tip'] = entry_container.find('div', attrs={'class': 'inlineRoomTip'}).text.replace('Room Tip: ', '')
     except:
         review['room-tip'] = 'n.a.'
 
@@ -349,7 +378,7 @@ def parse_review_information(review_url, user_base_url, header):
 
             for answer in recommend_answers:
                 recommend_description = answer.find('div', attrs={'class': 'recommend-description'}).text
-                rating = answer.find('img', attrs={'class': 'sprite-rating_ss_fill'})['alt'][0:1]
+                rating = answer.find('img', attrs={'class': 'sprite-rating_ss_fill'})['alt'][0:1] + ' stars'
 
                 if recommend_description == 'Value':
                     review['value-rating'] = rating
