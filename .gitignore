@@ -3,3 +3,6 @@
 
 # logs
 *.log
+
+# data
+*.csv
