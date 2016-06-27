@@ -216,10 +216,10 @@ def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path, head
                  review_data[0]['date'] + '|' + review_data[0]['rating'] + '|' + review_data[0]['value-rating'] + '|' + \
                  review_data[0]['location-rating'] + '|' + review_data[0]['rooms-rating'] + '|' + review_data[0]['cleanliness-rating'] + '|' + \
                  review_data[0]['service-rating'] + '|' + review_data[0]['business-rating'] + '|' + review_data[0]['check-rating'] + '|' + \
-                 review_data[0]['helpful-votes'] + '|' + review_data[0]['sleep-rating'] + '|' + review_data[0]['time'] + '|' + review_data[0]['reason'] + '|' + \
+                 review_data[0]['sleep-rating'] + '|' + review_data[0]['time'] + '|' + review_data[0]['reason'] + '|' + review_data[0]['helpful-votes'] + '|' + \
                  review_data[1]['name'] + '|' + review_data[1]['level'] + '|' + review_data[1]['since'] + '|' + \
                  review_data[1]['hometown'] + '|' + review_data[1]['demographic'] + '|' + review_data[1]['reviews'] + '|' + \
-                 review_data[1]['ratings'] + '|' + review_data[1]['helpfuls'] + '|' + review_data[1]['tags']
+                 review_data[1]['ratings'] + '|' + review_data[1]['photos'] + '|' + review_data[1]['helpfuls'] + '|' + review_data[1]['tags']
 
         # Write the data into the file
         csvwriter.writerow([record])
@@ -516,12 +516,14 @@ def parse_reviewer_information(user_name, user_base_url, header):
 
     try:
         tags = ''
-        tag_bubbles = soup.find_all('div', attrs={'class': 'tagBlock'}).find_all('div', attrs={'class': 'tagBubble'})
-
+        tag_bubbles = soup.find('div', attrs={'class': 'tagBlock'}).find_all('div', attrs={'class': 'tagBubble'})
         for tag_bubble in tag_bubbles:
             tags += tag_bubble.text + ', '
 
-        user['tags'] = tags
+        if tags == '':
+            user['tags'] = 'n.a'
+        else:
+            user['tags'] = tags[:-3]
     except:
         user['tags'] = 'n.a.'
 
