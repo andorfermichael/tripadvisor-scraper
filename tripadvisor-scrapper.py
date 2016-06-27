@@ -524,6 +524,12 @@ def parse_reviewer_information(user_name, user_base_url, header):
 
 # Main
 if __name__ == '__main__':
+    # Define commandline arguments
+    parser = argparse.ArgumentParser(description='scrape the reviews of a whole city on tripadvisor' , usage='python tripadvisor-scrapper 60763 New_York_City_New_York')
+    parser.add_argument('id', help='the geolocation id of the city')
+    parser.add_argument('name', help='the name of the city')
+    args = parser.parse_args()
+
     # Define user agent
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:47.0) Gecko/20100101 Firefox/47.0'}
 
@@ -531,7 +537,7 @@ if __name__ == '__main__':
     BASE_URL = 'http://www.tripadvisor.com/'
 
     # TODO: Load from file or enter via commandline
-    CITY_DEFAULT_URL = 'Hotels-g293974-Istanbul-Hotels.html'
+    CITY_DEFAULT_URL = 'Hotels-g' + args.id + '-' + args.name + '-Hotels.html'
     CITY_URL = BASE_URL + CITY_DEFAULT_URL
 
     USER_BASE_URL = 'https://www.tripadvisor.com/members/'
