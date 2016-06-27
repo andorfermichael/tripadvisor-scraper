@@ -29,6 +29,7 @@ def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
         if i == 0:
             # Append the already available first page url
             pagination_urls.append(city_default_url)
+            logger.info('PROCESSED: ' + city_url)
         else:
             # Calculate the dash positions
             occurences_of_dash = [j for j in range(len(city_default_url)) if city_default_url.startswith('-', j)]
@@ -42,6 +43,7 @@ def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
             # Build the current page url and append it to the list
             current_city_pagination_url = city_default_url[:second_dash_index] + '-oa' + str(city_pagination) + city_default_url[second_dash_index:] + '#ACCOM_OVERVIEW'
             pagination_urls.append(current_city_pagination_url)
+            logger.info('PROCESSED: ' + current_city_pagination_url)
 
     return pagination_urls
 
@@ -64,6 +66,7 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
         # Store each hotel url in the list
         for j, city_hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title'})):
             hotel_urls.append(base_url + soup.find_all('a', attrs={'class': 'property_title '})[j]['href'][1:])
+            logger.info('PROCESSED: ' + base_url + soup.find_all('a', attrs={'class': 'property_title '})[j]['href'][1:])
 
     # Remove duplicates
     hotel_urls = set(hotel_urls)
@@ -93,6 +96,7 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
             if i == 0:
                 # Append the already available first page url
                 pagination_urls.append(hotel_url + '#REVIEWS')
+                logger.info('PROCESSED: ' + hotel_url + '#REVIEWS')
             else:
                 # Calculate the dash positions
                 occurrences_of_dash = [j for j in range(len(hotel_url)) if hotel_url.startswith('-', j)]
@@ -106,6 +110,7 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
                 # Build the current page url and append it to the list
                 hotel_page_url = hotel_url[:fourth_dash_index] + '-or' + str(hotel_pagination) + hotel_url[fourth_dash_index:] + '#REVIEWS'
                 pagination_urls.append(hotel_page_url)
+                logger.info('PROCESSED: ' + hotel_page_url)
 
     return pagination_urls
 
@@ -134,6 +139,7 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
 
             # Append the complete review url to the list
             review_urls.append(base_url + review_url)
+            logger.info('PROCESSED: ' + base_url + review_url)
 
     return review_urls
 
@@ -151,7 +157,9 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
     rating_review_counter = [0, 0, 0, 0, 0]
     headline_exists = False
 
-    for review_url in review_urls[0:2]:
+    for i, review_url in enumerate(review_urls[0:2]):
+        logger.info('STARTED: Processing of ' + review_url + ' (Review ' + str(i + 1) + ' of ' + str(len(review_urls)) + ')')
+
         # Calculate the dash and point positions
         occurrences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
         occurrences_of_point = [j for j in range(len(review_url)) if review_url.startswith('.', j)]
@@ -173,33 +181,44 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
         # Parse review information
         try:
             review_information = parse_review_information(review_url, user_base_url, header)
-        except ValueError as err:
-            # Log here
+        except ValueError:
+            logger.warning('WARNING: Processing of ' + review_url + ' was skipped due to missing of essential information!')
+            break
+        except:
+            logger.warning('WARNING: Processing of ' + review_url + ' was skipped due to an unexpected error!')
             break
 
         # Store review information in csv file
-        store_review_data_in_csv(hotel_name, review_information, hotel_directory_path, headline_exists)
+        store_review_data_in_csv(review_url, hotel_name, review_information, hotel_directory_path, headline_exists)
 
         if not headline_exists:
             headline_exists = True
 
         # Store review text in textfile
-        store_review_data_in_txt(rating_directory_paths, review_information, rating_review_counter)
+        store_review_data_in_txt(review_url, rating_directory_paths, review_information, rating_review_counter)
+
+        logger.info('FINISHED: Processing of ' + review_url + ' (Review ' + str(i + 1) + ' of ' + str(len(review_urls)) + ')')
 
 # Creates a txt file for a hotel's reviews and stores the reviews inside
-def store_review_data_in_txt(rating_directory_paths, review_information, rating_review_counter):
+def store_review_data_in_txt(review_url, rating_directory_paths, review_information, rating_review_counter):
     rating = int(review_information[0]['rating'].replace(' stars', ''))
     rating_path = rating_directory_paths[rating - 1]
 
     # Referenced array is changed here, so we do not need to return it
     rating_review_counter[rating - 1] += 1
 
+    logger.info('STARTED: Storing of review text from ' + review_url + ' into ' + os.getcwd() + '/' + rating_path + '/review' + str(rating_review_counter[rating - 1]) + '.txt')
+
     # Write review text to file
-    with open(rating_path + '/review' + str(rating_review_counter[rating - 1]) +'.txt', 'wb') as file:
+    with open(rating_path + '/review' + str(rating_review_counter[rating - 1]) + '.txt', 'wb') as file:
         file.write(bytes(review_information[0]['text'], encoding='ascii', errors='ignore'))
 
+    logger.info('FINISHED: Storing of review text from ' + review_url + ' into ' + rating_path + '/review' + str(rating_review_counter[rating - 1]) + '.txt')
+
 # Creates a csv file for a hotel's reviews and stores the reviews inside
-def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path, headline_exists):
+def store_review_data_in_csv(review_url, hotel_name, review_data, hotel_directory_path, headline_exists):
+    logger.info('STARTED: Storing of review data from ' + review_url + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-reviews.csv')
+
     with open(hotel_directory_path + '/' + hotel_name + '-reviews.csv', 'a', newline='') as file:
         # Setup a writer
         csvwriter = csv.writer(file, delimiter='|')
@@ -228,8 +247,12 @@ def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path, head
         # Write the data into the file
         csvwriter.writerow([record])
 
+    logger.info('FINISHED: Storing of review data from ' + review_url + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-reviews.csv')
+
 # Creates a csv file for a hotel and stores the hotel information inside
 def store_hotel_data_in_csv(hotel_name, hotel_data, hotel_directory_path):
+    logger.info('STARTED: Storing of hotel data ' + hotel_name + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-information.csv')
+
     with open(hotel_directory_path + '/' + hotel_name + '-information.csv', 'w', newline='') as file:
         # Setup a writer
         csvwriter = csv.writer(file, delimiter='|')
@@ -246,6 +269,8 @@ def store_hotel_data_in_csv(hotel_name, hotel_data, hotel_directory_path):
         # Write the data into the file
         csvwriter.writerow([record])
 
+    logger.info('FINISHED: Storing of ' + hotel_name + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-information.csv')
+
 # Creates a directory for each rating category (e.g. 5 stars, 4 stars)
 def create_rating_directories(hotel_path):
     stars = [1, 2, 3, 4, 5]
@@ -256,8 +281,12 @@ def create_rating_directories(hotel_path):
         # Build directory name
         directory_path = hotel_path + '/' + str(star) + '-star'
 
+        logger.info('STARTED: Creation of directory ' + os.getcwd() + '/' + directory_path)
+
         # Create the folder
         os.makedirs(directory_path)
+
+        logger.info('FINISHED: Creation of directory ' + os.getcwd() + '/' + directory_path)
 
         paths.append(directory_path)
 
@@ -268,8 +297,12 @@ def create_hotel_directory(hotel_name, city_directory_name):
     # Build directory name
     directory_path = city_directory_name + '/' + hotel_name
 
+    logger.info('STARTED: Creation of directory ' + os.getcwd() + '/' + directory_path)
+
     # Create the folder
     os.makedirs(directory_path)
+
+    logger.info('FINISHED: Creation of directory ' + os.getcwd() + '/' + directory_path)
 
     return directory_path
 
@@ -285,8 +318,12 @@ def create_session_directory(city_default_url):
     # Build directory name
     directory_path = 'data/' + timestr + '-' + city_name
 
+    logger.info('STARTED: Creation of directory ' + os.getcwd() + directory_path)
+
     # Create the folder
     os.makedirs(directory_path)
+
+    logger.info('FINISHED: Creation of directory ' + os.getcwd() + directory_path)
 
     return directory_path
 
@@ -300,6 +337,8 @@ def parse_hotel_information(review_url, header):
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
+
+    logger.info('STARTED: Parsing of hotel data from ' + review_url)
 
     hotel['name'] = soup.find('a', attrs={'class': 'HEADING'}).text.strip()
     hotel['overall-rating'] = soup.find('img', attrs={'class': 'sprite-rating_no_fill'})['alt'][0:1] + ' stars'
@@ -358,6 +397,8 @@ def parse_hotel_information(review_url, header):
     except:
         hotel['description'] = 'n.a.'
 
+    logger.info('FINISHED: Parsing of hotel data from ' + review_url)
+
     return hotel
 
 
@@ -365,6 +406,8 @@ def parse_hotel_information(review_url, header):
 def parse_review_information(review_url, user_base_url, header):
     # Initialize the dictionary for the review
     review = dict()
+
+    logger.info('STARTED: Parsing of review data from ' + review_url)
 
     # Retrieve url content of the review url
     content = requests.get(review_url, header).content
@@ -388,6 +431,7 @@ def parse_review_information(review_url, user_base_url, header):
         review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
         review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text.replace('\n', ' ')
     except:
+        logger.warning('WARNING: Essential review information such as title or rating is missing!')
         raise ValueError('Essential review information such as title or rating is missing!')
 
     try:
@@ -446,13 +490,14 @@ def parse_review_information(review_url, user_base_url, header):
                 elif recommend_description == 'Sleep Quality':
                     review['sleep-rating'] = rating
 
-    except:
-        # Log here
-        print("")
+    except Exception as err:
+        logger.error('ERROR: An unexpected error occured while parsing review data from ' + review_url + ' - ' + str(err))
 
     # Parse user information
     user_name = user_container.find('div', attrs={'class': 'username'}).find('span', attrs={'class': 'scrname'}).text
     reviewer = parse_reviewer_information(user_name, user_base_url, header)
+
+    logger.info('FINISHED: Parsing of review data from ' + review_url)
 
     return [review, reviewer]
 
@@ -464,6 +509,8 @@ def parse_reviewer_information(user_name, user_base_url, header):
 
     # Define the user profile url
     profile_url = user_base_url + user_name
+
+    logger.info('STARTED: Parsing of user data from ' + profile_url)
 
     # Retrieve url content of the user url
     content = requests.get(profile_url, header).content
@@ -534,27 +581,32 @@ def parse_reviewer_information(user_name, user_base_url, header):
     except:
         user['tags'] = 'n.a.'
 
+    logger.info('FINISHED: Parsing of user data from ' + profile_url)
+
     return user
 
 
 # Main
 if __name__ == '__main__':
-    # Define commandline arguments
+    # Setup commandline handler
     parser = argparse.ArgumentParser(description='scrape the reviews of a whole city on tripadvisor' , usage='python tripadvisor-scrapper 60763 New_York_City_New_York')
     parser.add_argument('id', help='the geolocation id of the city')
     parser.add_argument('name', help='the name of the city')
     args = parser.parse_args()
 
+    # Setup logger
+    timestamp = time.strftime('%Y%m%d-%H%M%S')
+    logging.basicConfig(filename='./logs/' + timestamp + '--tripadvisor-scrapper.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+    logging.getLogger().addHandler(logging.StreamHandler())
+
     # Define user agent
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:47.0) Gecko/20100101 Firefox/47.0'}
 
-    # Define base url of TripAdvisor
+    # Define base urls of TripAdvisor
     BASE_URL = 'http://www.tripadvisor.com/'
-
-    # TODO: Load from file or enter via commandline
     CITY_DEFAULT_URL = 'Hotels-g' + args.id + '-' + args.name + '-Hotels.html'
     CITY_URL = BASE_URL + CITY_DEFAULT_URL
-
     USER_BASE_URL = 'https://www.tripadvisor.com/members/'
 
     # Define items per page
@@ -562,10 +614,14 @@ if __name__ == '__main__':
     number_of_reviews_per_page = 10
 
     # Parse all needed urls
+    logger.info('STARTED: Scraping of ' + args.name + ' review urls. Build tree "city-pagination-urls--city-hotel-urls--hotel-pagination-urls--hotel-review-urls".')
     city_pagination_urls = parse_pagination_urls_of_city(CITY_DEFAULT_URL, CITY_URL, number_of_hotels_per_page, headers)
     city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
     hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
     city_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
+    logger.info('FINISHED: Scraping of ' + args.name + ' review urls.')
 
     # Store all reviews of the city
+    logger.info('STARTED: Scraping of ' + args.name + ' review data.')
     parse_reviews_of_city(city_review_urls, CITY_DEFAULT_URL, USER_BASE_URL, headers)
+    logger.info('FINISHED: Scraping of ' + args.name + ' review data.')
