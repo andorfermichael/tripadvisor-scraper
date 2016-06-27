@@ -149,6 +149,7 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
     hotel_directory_path = ''
     rating_directory_paths = []
     rating_review_counter = [0, 0, 0, 0, 0]
+    headline_exists = False
 
     for review_url in review_urls[0:2]:
         # Calculate the dash and point positions
@@ -160,6 +161,7 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
 
         # Only process hotel information once
         if hotel_name not in processed_hotels:
+            headline_exists = False
             rating_directory_paths = []
             rating_review_counter = [0, 0, 0, 0, 0]
             processed_hotels.append(hotel_name)
@@ -172,7 +174,10 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
         review_information = parse_review_information(review_url, user_base_url, header)
 
         # Store review information in csv file
-        store_review_data_in_csv(hotel_name, review_information, hotel_directory_path)
+        store_review_data_in_csv(hotel_name, review_information, hotel_directory_path, headline_exists)
+
+        if not headline_exists:
+            headline_exists = True
 
         # Store review text in textfile
         store_review_data_in_txt(rating_directory_paths, review_information, rating_review_counter)
@@ -190,20 +195,21 @@ def store_review_data_in_txt(rating_directory_paths, review_information, rating_
         file.write(bytes(review_information[0]['text'], encoding='ascii', errors='ignore'))
 
 # Creates a csv file for a hotel's reviews and stores the reviews inside
-def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path):
+def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path, headline_exists):
     with open(hotel_directory_path + '/' + hotel_name + '-reviews.csv', 'a', newline='') as file:
         # Setup a writer
         csvwriter = csv.writer(file, delimiter='|')
 
         # Write headlines into the file
-        csvwriter.writerow(['Title', 'Text', 'Room Tip', 'Publication Date',
-                            'Overall Rating', 'Value Rating', 'Location Rating',
-                            'Rooms Rating', 'Cleanliness Rating', 'Service Rating',
-                            'Business Rating', 'Check-In Rating', 'Sleep Quality Rating',
-                            'Stay', 'Reason', 'Helpful Votes Count', 'Reviewer', 'Level', 'Member Since',
-                            'Hometown', 'Demographics', 'Review Count', 'Rating Count', 'Photo Count',
-                            'Reviewer Helpful Votes Count', 'Reviewer Tags'
-                            ])
+        if not headline_exists:
+            csvwriter.writerow(['Title', 'Text', 'Room Tip', 'Publication Date',
+                                'Overall Rating', 'Value Rating', 'Location Rating',
+                                'Rooms Rating', 'Cleanliness Rating', 'Service Rating',
+                                'Business Rating', 'Check-In Rating', 'Sleep Quality Rating',
+                                'Stay', 'Reason', 'Helpful Votes Count', 'Reviewer', 'Level', 'Member Since',
+                                'Hometown', 'Demographics', 'Review Count', 'Rating Count', 'Photo Count',
+                                'Reviewer Helpful Votes Count', 'Reviewer Tags'
+                                ])
 
         # Build the record
         record = review_data[0]['title'] + '|' + review_data[0]['text'] + '|' + review_data[0]['room-tip'] + '|' + \
