@@ -147,6 +147,8 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
     city_directory_path = create_session_directory(city_default_url)
 
     hotel_directory_path = ''
+    rating_directory_paths = []
+    rating_review_counter = [0, 0, 0, 0, 0]
 
     for review_url in review_urls[0:2]:
         # Calculate the dash and point positions
@@ -158,17 +160,34 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
 
         # Only process hotel information once
         if hotel_name not in processed_hotels:
+            rating_directory_paths = []
+            rating_review_counter = [0, 0, 0, 0, 0]
             processed_hotels.append(hotel_name)
             hotel_information = parse_hotel_information(review_url, header)
             hotel_directory_path = create_hotel_directory(hotel_name, city_directory_path)
-            store_hotel_data_in_csv(hotel_information, hotel_directory_path)
+            rating_directory_paths = create_rating_directories(hotel_directory_path)
+            store_hotel_data_in_csv(hotel_name, hotel_information, hotel_directory_path)
 
         # Parse review information
         review_information = parse_review_information(review_url, user_base_url, header)
 
-        # Store review information
+        # Store review information in csv file
         store_review_data_in_csv(hotel_name, review_information, hotel_directory_path)
 
+        # Store review text in textfile
+        store_review_data_in_txt(rating_directory_paths, review_information, rating_review_counter)
+
+# Creates a txt file for a hotel's reviews and stores the reviews inside
+def store_review_data_in_txt(rating_directory_paths, review_information, rating_review_counter):
+    rating = int(review_information[0]['rating'].replace(' stars', ''))
+    rating_path = rating_directory_paths[rating - 1]
+
+    # Referenced array is changed here, so we do not need to return it
+    rating_review_counter[rating - 1] += 1
+
+    # Write review text to file
+    with open(rating_path + '/review' + str(rating_review_counter[rating - 1]) +'.txt', 'wb') as file:
+        file.write(bytes(review_information[0]['text'], encoding='ascii', errors='ignore'))
 
 # Creates a csv file for a hotel's reviews and stores the reviews inside
 def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path):
@@ -200,8 +219,8 @@ def store_review_data_in_csv(hotel_name, review_data, hotel_directory_path):
         csvwriter.writerow([record])
 
 # Creates a csv file for a hotel and stores the hotel information inside
-def store_hotel_data_in_csv(hotel_data, hotel_directory_path):
-    with open(hotel_directory_path + '/' + hotel_data['name'].replace(' ', '_').lower() + '-information.csv', 'w', newline='') as file:
+def store_hotel_data_in_csv(hotel_name, hotel_data, hotel_directory_path):
+    with open(hotel_directory_path + '/' + hotel_name + '-information.csv', 'w', newline='') as file:
         # Setup a writer
         csvwriter = csv.writer(file, delimiter='|')
 
@@ -216,6 +235,23 @@ def store_hotel_data_in_csv(hotel_data, hotel_directory_path):
 
         # Write the data into the file
         csvwriter.writerow([record])
+
+# Creates a directory for each rating category (e.g. 5 stars, 4 stars)
+def create_rating_directories(hotel_path):
+    stars = [1, 2, 3, 4, 5]
+
+    paths = list()
+
+    for star in stars:
+        # Build directory name
+        directory_path = hotel_path + '/' + str(star) + '-star'
+
+        # Create the folder
+        os.makedirs(directory_path)
+
+        paths.append(directory_path)
+
+    return paths
 
 # Creates a directory for a hotel
 def create_hotel_directory(hotel_name, city_directory_name):
@@ -509,7 +545,6 @@ if __name__ == '__main__':
     city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
     hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
     city_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
-    #print(city_review_urls)
 
     # Store all reviews of the city
     parse_reviews_of_city(city_review_urls, CITY_DEFAULT_URL, USER_BASE_URL, headers)
