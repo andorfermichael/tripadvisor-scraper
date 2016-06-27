@@ -261,7 +261,7 @@ def parse_hotel_information(review_url, header):
 
     review_count = soup.find('h3', attrs={'class': 'reviews_header'}).text
     occurrences_of_spaces = [j for j in range(len(review_count)) if review_count.startswith(' ', j)]
-    hotel['review-count'] = review_count[0:occurrences_of_spaces[0]]
+    hotel['review-count'] = str(review_count[0:occurrences_of_spaces[0]])
 
     review_filter = soup.find('fieldset', attrs={'class': 'review_filter_lodging'})
     star_filter_items = review_filter.find('div', attrs={'class': 'col2of2'}).find_all('div', attrs={'class': 'wrap'})
@@ -303,9 +303,9 @@ def parse_hotel_information(review_url, header):
     except:
         hotel['amenities'] = 'n.a.'
 
-    hotel['stars'] = soup.find('div', attrs={'class': 'stars'}).text.replace('Hotel Class:', '').strip()[0:1]
+    hotel['stars'] = str(soup.find('div', attrs={'class': 'stars'}).text.replace('Hotel Class:', '').strip()[0:1])
 
-    hotel['room-count'] = soup.find('span', attrs={'class': 'tabs_num_rooms'}).text.strip()
+    hotel['room-count'] = str(soup.find('span', attrs={'class': 'tabs_num_rooms'}).text.strip())
 
     try:
         hotel['description'] = soup.find('span', attrs={'class': 'descriptive_text'}).text.strip() + soup.find('span', attrs={'class': 'descriptive_text_last'}).text.strip()
@@ -351,9 +351,9 @@ def parse_review_information(review_url, user_base_url, header):
         review['reason'] = 'n.a.'
 
     try:
-        review['helpful-votes'] = entry_container.find('span', attrs={'class': 'numHlpIn'}).text
+        review['helpful-votes'] = str(entry_container.find('span', attrs={'class': 'numHlpIn'}).text)
     except:
-        review['helpful-votes'] = 0
+        review['helpful-votes'] = 'n.a.'
 
     try:
         review['room-tip'] = entry_container.find('div', attrs={'class': 'inlineRoomTip'}).text.replace('Room Tip: ', '')
