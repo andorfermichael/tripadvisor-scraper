@@ -171,7 +171,11 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
             store_hotel_data_in_csv(hotel_name, hotel_information, hotel_directory_path)
 
         # Parse review information
-        review_information = parse_review_information(review_url, user_base_url, header)
+        try:
+            review_information = parse_review_information(review_url, user_base_url, header)
+        except ValueError as err:
+            # Log here
+            break
 
         # Store review information in csv file
         store_review_data_in_csv(hotel_name, review_information, hotel_directory_path, headline_exists)
@@ -378,10 +382,13 @@ def parse_review_information(review_url, user_base_url, header):
     entry_container = review_container.find('div', attrs={'class': 'col2of2'})
 
     # Parse review information
-    review['title'] = entry_container.find('div', attrs={'class': 'quote'}).text.strip().replace('“', '').replace('”', '')
-    review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1] + ' stars'
-    review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
-    review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text.replace('\n', ' ')
+    try:
+        review['title'] = entry_container.find('div', attrs={'class': 'quote'}).text.strip().replace('“', '').replace('”', '')
+        review['rating'] = entry_container.find('img', attrs={'class': 'sprite-rating_s_fill'})['alt'][0:1] + ' stars'
+        review['date'] = entry_container.find('span', attrs={'class': 'ratingDate'})['content']
+        review['text'] = entry_container.find('div', attrs={'class': 'entry'}).find('p').text.replace('\n', ' ')
+    except:
+        raise ValueError('Essential review information such as title or rating is missing!')
 
     try:
         stay = entry_container.find('span', attrs={'class': 'recommend-titleInline'}).text
@@ -413,7 +420,7 @@ def parse_review_information(review_url, user_base_url, header):
         review['check-rating'] = 'n.a.'
         review['sleep-rating'] = 'n.a.'
 
-        recommendation_columns = entry_container.find('ul', attrs={'class': 'recommend'}).find('li').find_all('ul',attrs={'class': 'recommend-column'})
+        recommendation_columns = entry_container.find('ul', attrs={'class': 'recommend'}).find('li').find_all('ul', attrs={'class': 'recommend-column'})
 
         for column in recommendation_columns:
             recommend_answers = column.find_all('li', attrs={'class': 'recommend-answer'})
