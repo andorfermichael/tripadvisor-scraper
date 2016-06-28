@@ -19,7 +19,7 @@ def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
     soup = BeautifulSoup(content, 'html.parser')
 
     # Scrape number of pages (pagination of hotels in the city)
-    number_of_pages_in_city = 1#soup.find('a', attrs={'class': 'last'}).contents[0]
+    number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
 
     for i in range(0, int(number_of_pages_in_city)):
         if i == 0:
@@ -49,7 +49,7 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
     # Initialize the list for the resulting urls
     hotel_urls = list()
 
-    for pagination_url in pagination_urls[0:1]:
+    for pagination_url in pagination_urls:
         # Build url out of base and current page url
         city_pagination_url = base_url + pagination_url
 
@@ -76,7 +76,7 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
     # Initialize the list for the resulting urls
     pagination_urls = list()
 
-    for hotel_url in hotel_urls[0:1]:
+    for hotel_url in hotel_urls:
         # Retrieve url content of the page url
         content = requests.get(hotel_url, header).content
 
@@ -116,7 +116,7 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
     # Initialize the list for the resulting urls
     review_urls = list()
 
-    for pagination_url in pagination_urls[0:1]:
+    for pagination_url in pagination_urls:
         # Retrieve url content of the hotel pagination url
         content = requests.get(pagination_url, header).content
 
@@ -152,7 +152,7 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
     rating_directory_paths = []
     headline_exists = False
 
-    for i, review_url in enumerate(review_urls[0:2]):
+    for i, review_url in enumerate(review_urls):
         logger.info('STARTED: Processing of ' + review_url + ' (Review ' + str(i + 1) + ' of ' + str(len(review_urls)) + ')')
 
         # Calculate the dash and point positions
