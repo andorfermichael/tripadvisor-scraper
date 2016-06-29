@@ -130,7 +130,11 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
 
         # Scrape the highest pagination value of a hotel's pages
         pagination_items = soup.find_all('a', attrs={'class': 'pageNum'})
-        maximum_pagination_of_hotel = int(pagination_items[-1].contents[0])
+        
+        try:
+            maximum_pagination_of_hotel = int(pagination_items[-1].contents[0])
+        except:
+            maximum_pagination_of_hotel = 1
 
         # Calculate all pagination urls of the hotel
         for i in range(0, maximum_pagination_of_hotel):
