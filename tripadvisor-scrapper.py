@@ -5,6 +5,51 @@ import time
 import os
 import csv
 from bs4 import BeautifulSoup
+from functools import wraps
+
+def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
+    """Retry calling the decorated function using an exponential backoff.
+
+    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+
+    :param ExceptionToCheck: the exception to check. may be a tuple of
+        exceptions to check
+    :type ExceptionToCheck: Exception or tuple
+    :param tries: number of times to try (not retry) before giving up
+    :type tries: int
+    :param delay: initial delay between retries in seconds
+    :type delay: int
+    :param backoff: backoff multiplier e.g. value of 2 will double the delay
+        each retry
+    :type backoff: int
+    :param logger: logger to use. If None, print
+    :type logger: logging.Logger instance
+    """
+    def deco_retry(f):
+        @wraps(f)
+        def f_retry(*args, **kwargs):
+            mtries, mdelay = tries, delay
+            while mtries > 1:
+                try:
+                    return f(*args, **kwargs)
+                except ExceptionToCheck as err:
+                    msg = "%s, Retrying in %d seconds..." % (str(err), mdelay)
+                    if logger:
+                        logger.warning(msg)
+                    else:
+                        print(msg)
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return f(*args, **kwargs)
+        return f_retry  # true decorator
+    return deco_retry
+
+
+@retry(Exception, tries=40, delay=5, backoff=2, logger=logging.getLogger('retry'))
+def get_request_with_retry(url, header):
+    return requests.get(url).content
 
 
 # Get all pagination urls of the city
@@ -13,7 +58,7 @@ def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
     pagination_urls = list()
 
     # Retrieve url content of city (first page)
-    content = requests.get(city_url, header).content
+    content = get_request_with_retry(city_url, header)
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
@@ -54,7 +99,7 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
         city_pagination_url = base_url + pagination_url
 
         # Retrieve url content of the page url
-        content = requests.get(city_pagination_url, header).content
+        content = get_request_with_retry(city_pagination_url, header)
 
         # Define parser
         soup = BeautifulSoup(content, 'html.parser')
@@ -78,7 +123,7 @@ def parse_pagination_urls_of_hotel(hotel_urls, header):
 
     for hotel_url in hotel_urls:
         # Retrieve url content of the page url
-        content = requests.get(hotel_url, header).content
+        content = get_request_with_retry(hotel_url, header)
 
         # Define parser
         soup = BeautifulSoup(content, 'html.parser')
@@ -118,7 +163,7 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
 
     for pagination_url in pagination_urls:
         # Retrieve url content of the hotel pagination url
-        content = requests.get(pagination_url, header).content
+        content = get_request_with_retry(pagination_url, header)
 
         # Define parser
         soup = BeautifulSoup(content, 'html.parser')
@@ -330,7 +375,7 @@ def parse_hotel_information(review_url, header):
     hotel = dict()
 
     # Retrieve url content of the review url
-    content = requests.get(review_url, header).content
+    content = get_request_with_retry(review_url, header)
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
@@ -413,7 +458,7 @@ def parse_review_information(review_url, user_base_url, header):
     logger.info('STARTED: Parsing of review data from ' + review_url)
 
     # Retrieve url content of the review url
-    content = requests.get(review_url, header).content
+    content = get_request_with_retry(review_url, header)
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
@@ -526,7 +571,7 @@ def parse_reviewer_information(user_name, user_base_url, header):
     logger.info('STARTED: Parsing of user data from ' + profile_url)
 
     # Retrieve url content of the user url
-    content = requests.get(profile_url, header).content
+    content = get_request_with_retry(profile_url, header)
 
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
