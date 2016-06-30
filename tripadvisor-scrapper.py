@@ -6,6 +6,7 @@ import os
 import csv
 from bs4 import BeautifulSoup
 from functools import wraps
+import pickle
 
 def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
     """Retry calling the decorated function using an exponential backoff.
@@ -190,12 +191,12 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
 
 
 # Parse all reviews of a city
-def parse_reviews_of_city(review_urls, city_default_url, user_base_url, header):
+def parse_reviews_of_city(review_urls, city_default_url, user_base_url, session_timestamp, header):
     processed_hotels = list()
     hotel_information = dict()
 
     # Create a directory for the current scrapping session
-    city_directory_path = create_session_directory(city_default_url)
+    city_directory_path = create_session_directory(city_default_url, session_timestamp)
 
     hotel_directory_path = ''
     rating_directory_paths = []
@@ -353,16 +354,13 @@ def create_hotel_directory(hotel_name, city_directory_name):
     return directory_path
 
 # Creates a directory for a session
-def create_session_directory(city_default_url):
-    # Get the current time
-    timestr = time.strftime('%Y%m%d-%H%M%S')
-
+def create_session_directory(city_default_url, session_timestamp):
     # Get the city name from the url
     occurrences_of_dash = [j for j in range(len(city_default_url)) if city_default_url.startswith('-', j)]
     city_name = city_default_url[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
 
     # Build directory name
-    directory_path = 'data/' + timestr + '-' + city_name
+    directory_path = 'data/' + session_timestamp + '-' + city_name
 
     logger.info('STARTED: Creation of directory ' + os.getcwd() + directory_path)
 
@@ -655,11 +653,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='scrape the reviews of a whole city on tripadvisor' , usage='python tripadvisor-scrapper 60763 New_York_City_New_York')
     parser.add_argument('id', help='the geolocation id of the city')
     parser.add_argument('name', help='the name of the city')
+    parser.add_argument('--pickle', choices=['load', 'store'], help='[load] store a scraped reviews list as pickle for later parsing,[load] load a scraped reviews list for parsing')
+    parser.add_argument('--filename', help='the filename of the pickle file placed in pickle directory')
     args = parser.parse_args()
 
     # Setup logger
-    timestamp = time.strftime('%Y%m%d-%H%M%S')
-    logging.basicConfig(filename='./logs/' + timestamp + '--tripadvisor-scrapper.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    session_timestamp = time.strftime('%Y%m%d-%H%M%S')
+    logging.basicConfig(filename='./logs/' + session_timestamp + '--tripadvisor-scrapper.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     logging.getLogger().addHandler(logging.StreamHandler())
 
@@ -677,14 +677,38 @@ if __name__ == '__main__':
     number_of_reviews_per_page = 10
 
     # Parse all needed urls
-    logger.info('STARTED: Scraping of ' + args.name + ' review urls. Build tree "city-pagination-urls--city-hotel-urls--hotel-pagination-urls--hotel-review-urls".')
-    city_pagination_urls = parse_pagination_urls_of_city(CITY_DEFAULT_URL, CITY_URL, number_of_hotels_per_page, headers)
-    city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
-    hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
-    city_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
-    logger.info('FINISHED: Scraping of ' + args.name + ' review urls.')
+    if not args.pickle or args.pickle == 'store':
+        logger.info('STARTED: Scraping of ' + args.name + ' review urls. Build tree "city-pagination-urls--city-hotel-urls--hotel-pagination-urls--hotel-review-urls".')
+        city_pagination_urls = parse_pagination_urls_of_city(CITY_DEFAULT_URL, CITY_URL, number_of_hotels_per_page, headers)
+        city_hotel_urls = parse_hotel_urls_of_city(BASE_URL, city_pagination_urls, headers)
+        hotel_pagination_urls = parse_pagination_urls_of_hotel(city_hotel_urls, headers)
+        city_review_urls = parse_review_urls_of_hotel(BASE_URL, hotel_pagination_urls, headers)
 
-    # Store all reviews of the city
-    logger.info('STARTED: Scraping of ' + args.name + ' review data.')
-    parse_reviews_of_city(city_review_urls, CITY_DEFAULT_URL, USER_BASE_URL, headers)
-    logger.info('FINISHED: Scraping of ' + args.name + ' review data.')
+        if args.pickle == 'store':
+            # Get the city name from the url
+            occurrences_of_dash = [j for j in range(len(CITY_DEFAULT_URL)) if CITY_DEFAULT_URL.startswith('-', j)]
+            city_name = CITY_DEFAULT_URL[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
+
+            # Build directory name
+            file_path = 'pickle/' + session_timestamp + '--' + city_name + '.pickle'
+
+            with open(file_path, 'wb') as pickle_file:
+                pickle.dump(city_review_urls, pickle_file)
+                logger.info('STORED: Stored review urls list in ' + file_path)
+
+        logger.info('FINISHED: Scraping of ' + args.name + ' review urls.')
+
+        # Store all reviews of the city
+        logger.info('STARTED: Scraping of ' + args.name + ' review data.')
+        parse_reviews_of_city(city_review_urls, CITY_DEFAULT_URL, USER_BASE_URL, session_timestamp, headers)
+        logger.info('FINISHED: Scraping of ' + args.name + ' review data.')
+    else:
+        city_review_urls = list()
+        with open('pickle/' + args.filename, 'rb') as pickle_file:
+            city_review_urls = pickle.load(pickle_file)
+            logger.info('LOADED: Loaded review urls list from pickle/' + args.filename)
+
+        # Store all reviews of the city
+        logger.info('STARTED: Scraping of ' + args.name + ' review data.')
+        parse_reviews_of_city(city_review_urls, CITY_DEFAULT_URL, USER_BASE_URL, session_timestamp, headers)
+        logger.info('FINISHED: Scraping of ' + args.name + ' review data.')

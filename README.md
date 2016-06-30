@@ -31,3 +31,17 @@ python tripadvisor-scrapper 190454 Vienna
 The scrapper requires the ```city location id``` and the ```city name``` as commandline arguments.
 Both can be retrieved from the url, for example, ```https://www.tripadvisor.com/Hotels-g60763-New_York_City_New_York-Hotels.html```
 The ```city location id``` is the number after the g. The ```city name``` is the string from the dash after the ```city location id``` to the dash before ```Hotels```.
+
+Store all reviews of Vienna and additionally store the review urls list as pickle for rescraping later:
+```python
+python tripadvisor-scrapper 190454 Vienna --pickle store
+```
+A pickle is stored in ```data/timestamp-cityname```
+
+
+Store all reviews of Vienna using a review urls list loaded from pickle/2016-06-01--1522-istanbul.pickle:
+```python
+python tripadvisor-scrapper 190454 Vienna --pickle load --filename 2016-06-01--1522-istanbul.pickle
+```
+
+A pickle to load has to be placed in the pickle directory at the same directory level as the ```tripadvisor-scrapper.py```
