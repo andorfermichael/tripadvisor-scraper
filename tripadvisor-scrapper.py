@@ -251,7 +251,7 @@ def store_review_data_in_txt(review_url, rating_directory_paths, review_informat
     logger.info('STARTED: Storing of review text from ' + review_url + ' into ' + os.getcwd() + '/' + rating_path + '/review_' + review_url[27:] + '.txt')
 
     # Write review text to file
-    with open(rating_path + '/review_' + review_url[27:] + '.txt', 'wb') as file:
+    with open(rating_path + '/review_' + review_url[43:-22] + '.txt', 'wb') as file:
         file.write(bytes(review_information[0]['text'], encoding='ascii', errors='ignore'))
 
     logger.info('FINISHED: Storing of review text from ' + review_url + ' into ' + rating_path + '/review_' + review_url[27:] + '.txt')
@@ -690,7 +690,7 @@ if __name__ == '__main__':
             city_name = CITY_DEFAULT_URL[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
 
             # Build directory name
-            file_path = 'pickle/' + session_timestamp + '--' + city_name + '.pickle'
+            file_path = 'pickle/' + session_timestamp + '-' + city_name + '.pickle'
 
             with open(file_path, 'wb') as pickle_file:
                 pickle.dump(city_review_urls, pickle_file)
