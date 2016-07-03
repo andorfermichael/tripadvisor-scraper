@@ -205,12 +205,11 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, session_
     for i, review_url in enumerate(review_urls):
         logger.info('STARTED: Processing of ' + review_url + ' (Review ' + str(i + 1) + ' of ' + str(len(review_urls)) + ')')
 
-        # Calculate the dash and point positions
+        # Calculate the dash positions
         occurrences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
-        occurrences_of_point = [j for j in range(len(review_url)) if review_url.startswith('.', j)]
 
         # Get the hotel name out of the url
-        hotel_name = review_url[occurrences_of_dash[3] + 1:occurrences_of_point[2]].replace(' ', '_').lower()
+        hotel_name = review_url[occurrences_of_dash[3] + 1:occurrences_of_dash[4]].replace(' ', '_').lower()
 
         # Only process hotel information once
         if hotel_name not in processed_hotels:
@@ -233,13 +232,21 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, session_
             continue
 
         # Store review information in csv file
-        store_review_data_in_csv(review_url, hotel_name, review_information, hotel_directory_path, headline_exists)
+        try:
+            store_review_data_in_csv(review_url, hotel_name, review_information, hotel_directory_path, headline_exists)
+        except:
+            logger.warning('WARNING: Processing of ' + review_url + ' was skipped due to an unexpected error!')
+            continue
 
         if not headline_exists:
             headline_exists = True
 
         # Store review text in textfile
-        store_review_data_in_txt(review_url, rating_directory_paths, review_information)
+        try:
+            store_review_data_in_txt(review_url, rating_directory_paths, review_information)
+		except:
+            logger.warning('WARNING: Processing of ' + review_url + ' was skipped due to an unexpected error!')
+            continue		
 
         logger.info('FINISHED: Processing of ' + review_url + ' (Review ' + str(i + 1) + ' of ' + str(len(review_urls)) + ')')
 
@@ -247,11 +254,14 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, session_
 def store_review_data_in_txt(review_url, rating_directory_paths, review_information):
     rating = int(review_information[0]['rating'].replace(' stars', ''))
     rating_path = rating_directory_paths[rating - 1]
+	
+    # Calculate the dash positions
+    occurences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
 
     logger.info('STARTED: Storing of review text from ' + review_url + ' into ' + os.getcwd() + '/' + rating_path + '/review_' + review_url[27:] + '.txt')
-
+	
     # Write review text to file
-    with open(rating_path + '/review_' + review_url[43:-22] + '.txt', 'wb') as file:
+    with open(rating_path + '/review_' + review_url[occurences_of_dash[0] + 1:occurences_of_dash[3]] + '.txt', 'wb') as file:
         file.write(bytes(review_information[0]['text'], encoding='ascii', errors='ignore'))
 
     logger.info('FINISHED: Storing of review text from ' + review_url + ' into ' + rating_path + '/review_' + review_url[27:] + '.txt')
