@@ -403,33 +403,42 @@ def parse_hotel_information(review_url, header):
     hotel['review-count'] = str(review_count[0:occurrences_of_spaces[0]])
 
     review_filter = soup.find('fieldset', attrs={'class': 'review_filter_lodging'})
-    star_filter_items = review_filter.find('div', attrs={'class': 'col2of2'}).find_all('div', attrs={'class': 'wrap'})
-    reason_filter_items = review_filter.find('div', attrs={'class': 'trip_type'}).find_all('div', attrs={'class': 'segment'})
-    star_filter_string = ''
-    reason_filter_string = ''
-
-    for star_filter_item in star_filter_items:
-        description = star_filter_item.find('span', attrs={'class': 'text'}).text
-        count = star_filter_item.find('span', attrs={'class': 'compositeCount'}).text
-        star_filter_string += description + ' (' + count + ') - '
-
-    for reason_filter_item in reason_filter_items:
-        description = reason_filter_item.find('div', attrs={'class': 'filter_selection'}).text
-        count = reason_filter_item.find('div', attrs={'class': 'value'}).text
-        reason_filter_string += description + ' (' + count + ') - '
-
-    hotel['star-filter'] = star_filter_string[0:-3]
-    hotel['reason-filter'] = reason_filter_string[0:-3]
-
-    language_items = soup.find('select', attrs={'id': 'filterLang'}).find_all('option')[:-1]
-    languages = ''
-
-    for language_item in language_items:
-        languages += language_item.text.replace('first', '').strip() + ', '
-
-    hotel['reviewer-languages'] = languages[:-2]
 
     hotel['address'] = soup.find('span', attrs={'class': 'format_address'}).text.replace('|', '-')
+
+    try:
+        star_filter_items = review_filter.find('div', attrs={'class': 'col2of2'}).find_all('div', attrs={'class': 'wrap'})
+        star_filter_string = ''
+        for star_filter_item in star_filter_items:
+            description = star_filter_item.find('span', attrs={'class': 'text'}).text
+            count = star_filter_item.find('span', attrs={'class': 'compositeCount'}).text
+            star_filter_string += description + ' (' + count + ') - '
+        hotel['star-filter'] = star_filter_string[0:-3]
+    except:
+        hotel['star-filter'] = 'n.a.'
+
+
+    try:
+        reason_filter_items = review_filter.find('div', attrs={'class': 'trip_type'}).find_all('div', attrs={'class': 'segment'})
+        reason_filter_string = ''
+        for reason_filter_item in reason_filter_items:
+            description = reason_filter_item.find('div', attrs={'class': 'filter_selection'}).text
+            count = reason_filter_item.find('div', attrs={'class': 'value'}).text
+            reason_filter_string += description + ' (' + count + ') - '
+        hotel['reason-filter'] = reason_filter_string[0:-3]
+    except:
+        hotel['reason-filter'] = 'n.a.'
+
+    try:
+        language_items = soup.find('select', attrs={'id': 'filterLang'}).find_all('option')[:-1]
+        languages = ''
+
+        for language_item in language_items:
+            languages += language_item.text.replace('first', '').strip() + ', '
+
+        hotel['reviewer-languages'] = languages[:-2]
+    except:
+        hotel['reviewer-languages'] = 'n.a.'
 
     try:
         amenity_items = soup.find('div', attrs={'class': 'indent'}).find_all('span', attrs={'class': 'amenity'})
@@ -588,8 +597,15 @@ def parse_reviewer_information(user_name, user_base_url, header):
     # Define parser
     soup = BeautifulSoup(content, 'html.parser')
 
-    user['url'] = profile_url
-    user['name'] = user_name
+    try:
+        user['url'] = profile_url
+    except:
+        user['url'] = 'n.a'
+
+    try:
+        user['name'] = user_name
+    except:
+        user['name'] = 'n.a'
 
     try:
         user['level'] = soup.find('div', attrs={'class': 'level'}).find('span').text
