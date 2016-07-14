@@ -244,7 +244,7 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, session_
         # Store review text in textfile
         try:
             store_review_data_in_txt(review_url, rating_directory_paths, review_information)
-		except:
+        except:
             logger.warning('WARNING: Processing of ' + review_url + ' was skipped due to an unexpected error!')
             continue		
 
@@ -258,19 +258,19 @@ def store_review_data_in_txt(review_url, rating_directory_paths, review_informat
     # Calculate the dash positions
     occurences_of_dash = [j for j in range(len(review_url)) if review_url.startswith('-', j)]
 
-    logger.info('STARTED: Storing of review text from ' + review_url + ' into ' + os.getcwd() + '/' + rating_path + '/review_' + review_url[27:] + '.txt')
+    logger.info('STARTED: Storing of review text from ' + review_url + ' into ' + rating_path.replace('\\\\?\\', '') + '\\review_' + review_url[occurences_of_dash[0] + 1:occurences_of_dash[3]] + '.txt')
 	
     # Write review text to file
-    with open(rating_path + '/review_' + review_url[occurences_of_dash[0] + 1:occurences_of_dash[3]] + '.txt', 'wb') as file:
+    with open(rating_path + '\\review_' + review_url[occurences_of_dash[0] + 1:occurences_of_dash[3]] + '.txt', 'wb') as file:
         file.write(bytes(review_information[0]['text'], encoding='ascii', errors='ignore'))
 
-    logger.info('FINISHED: Storing of review text from ' + review_url + ' into ' + rating_path + '/review_' + review_url[27:] + '.txt')
+    logger.info('FINISHED: Storing of review text from ' + review_url + ' into ' + rating_path.replace('\\\\?\\', '') + '\\review_' + review_url[occurences_of_dash[0] + 1:occurences_of_dash[3]] + '.txt')
 
 # Creates a csv file for a hotel's reviews and stores the reviews inside
 def store_review_data_in_csv(review_url, hotel_name, review_data, hotel_directory_path, headline_exists):
-    logger.info('STARTED: Storing of review data from ' + review_url + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-reviews.csv')
+    logger.info('STARTED: Storing of review data from ' + review_url + ' into ' + hotel_directory_path.replace('\\\\?\\', '') + '\\' + hotel_name + '-reviews.csv')
 
-    with open(hotel_directory_path + '/' + hotel_name + '-reviews.csv', 'a') as file:
+    with open(hotel_directory_path + '\\' + hotel_name + '-reviews.csv', 'a') as file:
         # Setup a writer
         csvwriter = csv.writer(file, delimiter='|', dialect='excel')
 
@@ -304,13 +304,13 @@ def store_review_data_in_csv(review_url, hotel_name, review_data, hotel_director
             ]
         )
 
-    logger.info('FINISHED: Storing of review data from ' + review_url + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-reviews.csv')
+    logger.info('FINISHED: Storing of review data from ' + review_url + ' into ' + hotel_directory_path.replace('\\\\?\\', '') + '\\' + hotel_name + '-reviews.csv')
 
 # Creates a csv file for a hotel and stores the hotel information inside
 def store_hotel_data_in_csv(hotel_name, hotel_data, hotel_directory_path):
-    logger.info('STARTED: Storing of hotel data ' + hotel_name + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-information.csv')
+    logger.info('STARTED: Storing of hotel data ' + hotel_name + ' into ' + hotel_directory_path.replace('\\\\?\\', '') + '\\' + hotel_name + '-information.csv')
 
-    with open(hotel_directory_path + '/' + hotel_name + '-information.csv', 'w') as csvfile:
+    with open(hotel_directory_path + '\\' + hotel_name + '-information.csv', 'w') as csvfile:
         # Setup a writer
         csvwriter = csv.writer(csvfile, delimiter='|', dialect='excel')
 
@@ -326,7 +326,7 @@ def store_hotel_data_in_csv(hotel_name, hotel_data, hotel_directory_path):
             ]
         )
 
-    logger.info('FINISHED: Storing of ' + hotel_name + ' into ' + os.getcwd() + '/' + hotel_directory_path + '/' + hotel_name + '-information.csv')
+    logger.info('FINISHED: Storing of ' + hotel_name + ' into ' + hotel_directory_path.replace('\\\\?\\', '') + '\\' + hotel_name + '-information.csv')
 
 # Creates a directory for each rating category (e.g. 5 stars, 4 stars)
 def create_rating_directories(hotel_path):
@@ -336,14 +336,14 @@ def create_rating_directories(hotel_path):
 
     for star in stars:
         # Build directory name
-        directory_path = hotel_path + '/' + str(star) + '-star'
+        directory_path = hotel_path + '\\' + str(star) + '-star'
 
-        logger.info('STARTED: Creation of directory ' + os.getcwd() + '/' + directory_path)
+        logger.info('STARTED: Creation of directory ' + hotel_path.replace('\\\\?\\', '') + '\\' + str(star) + '-star')
 
         # Create the folder
         os.makedirs(directory_path)
 
-        logger.info('FINISHED: Creation of directory ' + os.getcwd() + '/' + directory_path)
+        logger.info('FINISHED: Creation of directory ' + hotel_path.replace('\\\\?\\', '') + '\\' + str(star) + '-star')
 
         paths.append(directory_path)
 
@@ -352,14 +352,14 @@ def create_rating_directories(hotel_path):
 # Creates a directory for a hotel
 def create_hotel_directory(hotel_name, city_directory_name):
     # Build directory name
-    directory_path = city_directory_name + '/' + hotel_name
+    directory_path = city_directory_name + '\\' + hotel_name
 
-    logger.info('STARTED: Creation of directory ' + os.getcwd() + '/' + directory_path)
+    logger.info('STARTED: Creation of directory ' + city_directory_name.replace('\\\\?\\', '') + '\\' + hotel_name)
 
     # Create the folder
     os.makedirs(directory_path)
 
-    logger.info('FINISHED: Creation of directory ' + os.getcwd() + '/' + directory_path)
+    logger.info('FINISHED: Creation of directory ' + city_directory_name.replace('\\\\?\\', '') + '\\' + hotel_name)
 
     return directory_path
 
@@ -370,14 +370,14 @@ def create_session_directory(city_default_url, session_timestamp):
     city_name = city_default_url[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
 
     # Build directory name
-    directory_path = 'data/' + session_timestamp + '-' + city_name
+    directory_path = '\\\\?\\' + os.getcwd() + '\\data\\' + session_timestamp + '-' + city_name
 
-    logger.info('STARTED: Creation of directory ' + os.getcwd() + directory_path)
+    logger.info('STARTED: Creation of directory ' + os.getcwd() + '\\data\\' + session_timestamp + '-' + city_name)
 
     # Create the folder
     os.makedirs(directory_path)
 
-    logger.info('FINISHED: Creation of directory ' + os.getcwd() + directory_path)
+    logger.info('FINISHED: Creation of directory ' + os.getcwd() + '\\data\\' + session_timestamp + '-' + city_name)
 
     return directory_path
 
@@ -700,7 +700,7 @@ if __name__ == '__main__':
             city_name = CITY_DEFAULT_URL[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
 
             # Build directory name
-            file_path = 'pickle/' + session_timestamp + '-' + city_name + '.pickle'
+            file_path = '\\pickle\\' + session_timestamp + '-' + city_name + '.pickle'
 
             with open(file_path, 'wb') as pickle_file:
                 pickle.dump(city_review_urls, pickle_file)
@@ -716,7 +716,7 @@ if __name__ == '__main__':
         city_review_urls = list()
         with open('pickle/' + args.filename, 'rb') as pickle_file:
             city_review_urls = pickle.load(pickle_file)
-            logger.info('LOADED: Loaded review urls list from pickle/' + args.filename)
+            logger.info('LOADED: Loaded review urls list from ' + os.getcwd() + '\\pickle\\' + args.filename)
 
         # Store all reviews of the city
         logger.info('STARTED: Scraping of ' + args.name + ' review data.')
