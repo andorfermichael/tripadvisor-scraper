@@ -51,7 +51,9 @@ def copy_review_files(source_directory, destination_directory):
     for file_name in src_files:
         full_file_name = os.path.join(source_directory, file_name)
         if (os.path.isfile(full_file_name)):
+            logger.info('STARTED: Copying ' + full_file_name + ' to ' + destination_directory)
             shutil.copy(full_file_name, destination_directory)
+            logger.info('FINISHED: Copying ' + full_file_name + ' to ' + destination_directory)
 
 # Copies csv rows from source files to one destination file
 def copy_review_csv_rows(source_directory, destination_directory):
@@ -64,6 +66,7 @@ def copy_review_csv_rows(source_directory, destination_directory):
             break
 
     full_file_name = os.path.join(source_directory, file_name)
+    logger.info('STARTED: Copying information from ' + full_file_name + ' to ' + destination_directory)
     if (os.path.isfile(full_file_name)):
         with open(full_file_name, 'r', encoding = 'ISO-8859-1') as src_csv:
             reader = csv.reader(src_csv, delimiter='|')
@@ -74,6 +77,8 @@ def copy_review_csv_rows(source_directory, destination_directory):
                 for counter, row in enumerate(reader):
                     if counter > 1:
                         writer.writerow(row)
+
+    logger.info('FINISHED: Copying information from ' + full_file_name + ' to ' + destination_directory)
 
 # Copies hotel information csv files to destination directory
 def copy_hotel_information(source_directory, destination_directory):
@@ -87,7 +92,9 @@ def copy_hotel_information(source_directory, destination_directory):
 
     full_file_name = os.path.join(source_directory, file_name)
     if (os.path.isfile(full_file_name)):
+        logger.info('STARTED: Copying ' + full_file_name + ' to ' + destination_directory)
         shutil.copy(full_file_name, destination_directory)
+        logger.info('FINISHED: Copying ' + full_file_name + ' to ' + destination_directory)
 
 
 # Main
@@ -106,6 +113,8 @@ if __name__ == '__main__':
     # Get the source directory path and source directory name
     source_path = args.path
     source_directory = os.path.basename(os.path.normpath(source_path))
+
+    logger.info('STARTED: Totalizing of ' + source_directory)
 
     # Create the target directory and its subdirectories
     target_directory = create_session_directory(source_directory)
@@ -149,4 +158,4 @@ if __name__ == '__main__':
             copy_hotel_information(sub_directory_path, target_directory)
             copy_review_csv_rows(sub_directory_path, target_directory)
 
-
+    logger.info('FINISHED: Totalizing of ' + source_directory)
