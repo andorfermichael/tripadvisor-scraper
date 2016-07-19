@@ -65,7 +65,10 @@ def parse_pagination_urls_of_city(city_default_url, city_url, offset, header):
     soup = BeautifulSoup(content, 'html.parser')
 
     # Scrape number of pages (pagination of hotels in the city)
-    number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
+    try:
+        number_of_pages_in_city = soup.find('a', attrs={'class': 'last'}).contents[0]
+    except:
+        number_of_pages_in_city = 1
 
     for i in range(0, int(number_of_pages_in_city)):
         if i == 0:
@@ -213,13 +216,17 @@ def parse_reviews_of_city(review_urls, city_default_url, user_base_url, session_
 
         # Only process hotel information once
         if hotel_name not in processed_hotels:
-            headline_exists = False
-            rating_directory_paths = []
-            processed_hotels.append(hotel_name)
-            hotel_information = parse_hotel_information(review_url, header)
-            hotel_directory_path = create_hotel_directory(hotel_name, city_directory_path)
-            rating_directory_paths = create_rating_directories(hotel_directory_path)
-            store_hotel_data_in_csv(hotel_name, hotel_information, hotel_directory_path)
+            try:
+                headline_exists = False
+                rating_directory_paths = []
+                processed_hotels.append(hotel_name)
+                hotel_information = parse_hotel_information(review_url, header)
+                hotel_directory_path = create_hotel_directory(hotel_name, city_directory_path)
+                rating_directory_paths = create_rating_directories(hotel_directory_path)
+                store_hotel_data_in_csv(hotel_name, hotel_information, hotel_directory_path)
+            except:
+                logger.warning('WARNING: Processing of ' + review_url + ' was skipped due to an unexpected error!')
+                continue
 
         # Parse review information
         try:
@@ -716,11 +723,11 @@ if __name__ == '__main__':
             city_name = CITY_DEFAULT_URL[occurrences_of_dash[1] + 1:occurrences_of_dash[2]].lower()
 
             # Build directory name
-            file_path = '\\pickle\\' + session_timestamp + '-' + city_name + '.pickle'
+            file_path = 'pickle\\' + session_timestamp + '-' + city_name + '.pickle'
 
             with open(file_path, 'wb') as pickle_file:
                 pickle.dump(city_review_urls, pickle_file)
-                logger.info('STORED: Stored review urls list in ' + file_path)
+                logger.info('STORED: Stored review urls list in ' + os.getcwd() + '\\' + file_path)
 
         logger.info('FINISHED: Scraping of ' + args.name + ' review urls.')
 
