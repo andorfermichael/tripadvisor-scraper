@@ -692,7 +692,7 @@ if __name__ == '__main__':
 
     # Setup logger
     session_timestamp = time.strftime('%Y%m%d-%H%M%S')
-    logging.basicConfig(filename='./logs/' + session_timestamp + '--tripadvisor-scrapper.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename='./logs/' + session_timestamp + '-' + args.name.lower() + '.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     logging.getLogger().addHandler(logging.StreamHandler())
 
