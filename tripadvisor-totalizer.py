@@ -3,6 +3,7 @@ import logging
 import time
 import shutil
 import os
+import csv
 
 def get_subdirectories(rootdir):
     return [x[0] for x in os.walk(rootdir)]
@@ -50,6 +51,30 @@ def copy_review_files(source_directory, destination_directory):
         if (os.path.isfile(full_file_name)):
             shutil.copy(full_file_name, destination_directory)
 
+
+def copy_review_csv_rows(source_directory, destination_directory):
+    src_files = os.listdir(source_directory)
+    file_name = ''
+
+    for src_file in src_files:
+        if 'reviews' in src_file:
+            file_name = src_file
+            break
+
+    full_file_name = os.path.join(source_directory, file_name)
+    if (os.path.isfile(full_file_name)):
+        with open(full_file_name, 'r', encoding = 'ISO-8859-1') as src_csv:
+            reader = csv.reader(src_csv, delimiter='|')
+            #reader = csv.DictReader(f, delimiter='\t')
+
+            with open(destination_directory + '/reviews.csv', 'a', encoding = 'ISO-8859-1') as dest_csv:
+                writer = csv.writer(dest_csv, delimiter='|', dialect='excel', lineterminator='\n')
+
+                for counter, row in enumerate(reader):
+                    if counter > 1:
+                        writer.writerow(row)
+
+
 def copy_hotel_information(source_directory, destination_directory):
     src_files = os.listdir(source_directory)
     file_name = ''
@@ -63,7 +88,6 @@ def copy_hotel_information(source_directory, destination_directory):
     if (os.path.isfile(full_file_name)):
         shutil.copy(full_file_name, destination_directory)
 
-def copy_review_csv_information(source_directory, destination_directory):
 
 # Main
 if __name__ == '__main__':
@@ -83,6 +107,22 @@ if __name__ == '__main__':
     target_directory = create_session_directory(source_folder)
     star_directories = create_rating_directories(target_directory)
 
+    with open(target_directory + '/reviews.csv', 'w') as dest_csv:
+        writer = csv.writer(dest_csv, delimiter='|', dialect='excel')
+
+        # Write headlines into the file
+        writer.writerow(
+            [
+                'Title', 'Text', 'Room Tip', 'Publication Date',
+                'Overall Rating', 'Value Rating', 'Location Rating',
+                'Rooms Rating', 'Cleanliness Rating', 'Service Rating',
+                'Business Rating', 'Check-In Rating', 'Sleep Quality Rating',
+                'Stay', 'Reason', 'Helpful Votes Count', 'Review URL', 'Reviewer', 'Level', 'Member Since',
+                'Hometown', 'Demographics', 'Review Count', 'Rating Count', 'Photo Count',
+                'Reviewer Helpful Votes Count', 'Reviewer Tags', 'Reviewer Profile URL'
+            ]
+        )
+
     sub_directory_paths = get_subdirectories(source_path)
 
     for sub_directory_path in sub_directory_paths:
@@ -100,7 +140,6 @@ if __name__ == '__main__':
             copy_review_files(sub_directory_path, star_directories[4])
         else:
             copy_hotel_information(sub_directory_path, target_directory)
-
-
+            copy_review_csv_rows(sub_directory_path, target_directory)
 
 
