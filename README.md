@@ -12,7 +12,7 @@ Download and install required libs and data:
 pip install bs4
 ```
 
-## Usage
+## Usage Scrapper
 Store all reviews of New York City:
 ```python
 python tripadvisor-scrapper.py 60763 New_York_City_New_York
@@ -45,3 +45,9 @@ python tripadvisor-scrapper.py 190454 Vienna --pickle load --filename 20160601-1
 ```
 
 A pickle to load has to be placed in the pickle directory at the same directory level as the ```tripadvisor-scrapper.py```
+
+## Usage Totalizer
+Put all reviews and hotel information of a city together:
+```python
+python tripadvisor-totalizer.py /Users/admin/tripadvisor-scrapper/data/20160716-202314-vienna
+```
