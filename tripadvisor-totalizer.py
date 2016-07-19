@@ -43,6 +43,8 @@ def create_rating_directories(path):
 
     return paths
 
+
+# Copies review text files from source directory to destination directory
 def copy_review_files(source_directory, destination_directory):
     src_files = os.listdir(source_directory)
 
@@ -51,7 +53,7 @@ def copy_review_files(source_directory, destination_directory):
         if (os.path.isfile(full_file_name)):
             shutil.copy(full_file_name, destination_directory)
 
-
+# Copies csv rows from source files to one destination file
 def copy_review_csv_rows(source_directory, destination_directory):
     src_files = os.listdir(source_directory)
     file_name = ''
@@ -65,7 +67,6 @@ def copy_review_csv_rows(source_directory, destination_directory):
     if (os.path.isfile(full_file_name)):
         with open(full_file_name, 'r', encoding = 'ISO-8859-1') as src_csv:
             reader = csv.reader(src_csv, delimiter='|')
-            #reader = csv.DictReader(f, delimiter='\t')
 
             with open(destination_directory + '/reviews.csv', 'a', encoding = 'ISO-8859-1') as dest_csv:
                 writer = csv.writer(dest_csv, delimiter='|', dialect='excel', lineterminator='\n')
@@ -74,7 +75,7 @@ def copy_review_csv_rows(source_directory, destination_directory):
                     if counter > 1:
                         writer.writerow(row)
 
-
+# Copies hotel information csv files to destination directory
 def copy_hotel_information(source_directory, destination_directory):
     src_files = os.listdir(source_directory)
     file_name = ''
@@ -96,17 +97,21 @@ if __name__ == '__main__':
     parser.add_argument('path', help='path of city directory with reviews')
     args = parser.parse_args()
 
+    # Setup logger
     session_timestamp = time.strftime('%Y%m%d-%H%M%S')
     logging.basicConfig(filename='./logs/' + session_timestamp + '-totalizer.log', level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     logging.getLogger().addHandler(logging.StreamHandler())
 
+    # Get the source directory path and source directory name
     source_path = args.path
-    source_folder = os.path.basename(os.path.normpath(source_path))
+    source_directory = os.path.basename(os.path.normpath(source_path))
 
-    target_directory = create_session_directory(source_folder)
+    # Create the target directory and its subdirectories
+    target_directory = create_session_directory(source_directory)
     star_directories = create_rating_directories(target_directory)
 
+    # Create the target file for review csv rows
     with open(target_directory + '/reviews.csv', 'w') as dest_csv:
         writer = csv.writer(dest_csv, delimiter='|', dialect='excel')
 
@@ -123,8 +128,10 @@ if __name__ == '__main__':
             ]
         )
 
+    # Get all subdirectory paths of the source directory
     sub_directory_paths = get_subdirectories(source_path)
 
+    # Process each subdirectory
     for sub_directory_path in sub_directory_paths:
         sub_directory_name = os.path.basename(os.path.normpath(sub_directory_path))
 
