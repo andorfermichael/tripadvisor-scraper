@@ -1,6 +1,7 @@
 import argparse
 import logging
 import time
+import shutil
 import os
 
 def get_subdirectories(rootdir):
@@ -41,6 +42,14 @@ def create_rating_directories(path):
 
     return paths
 
+def copy_reviews(source_directory, destination_directory):
+    src_files = os.listdir(source_directory)
+
+    for file_name in src_files:
+        full_file_name = os.path.join(source_directory, file_name)
+        if (os.path.isfile(full_file_name)):
+            shutil.copy(full_file_name, destination_directory)
+
 # Main
 if __name__ == '__main__':
     # Setup commandline handler
@@ -60,6 +69,20 @@ if __name__ == '__main__':
     star_directories = create_rating_directories(target_directory)
 
     sub_directory_paths = get_subdirectories(source_path)
+
+    for sub_directory_path in sub_directory_paths:
+        sub_directory_name = os.path.basename(os.path.normpath(sub_directory_path))
+
+        if sub_directory_name == '1-star':
+            copy_reviews(sub_directory_path, star_directories[0])
+        elif sub_directory_name == '2-star':
+            copy_reviews(sub_directory_path, star_directories[1])
+        elif sub_directory_name == '3-star':
+            copy_reviews(sub_directory_path, star_directories[2])
+        elif sub_directory_name == '4-star':
+            copy_reviews(sub_directory_path, star_directories[3])
+        elif sub_directory_name == '5-star':
+            copy_reviews(sub_directory_path, star_directories[4])
 
 
 
