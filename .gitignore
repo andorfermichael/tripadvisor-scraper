@@ -1,0 +1,10 @@
+# ide
+.idea
+
+# logs
+*.log
+
+# data
+*.csv
+*.txt
+*.pickle
