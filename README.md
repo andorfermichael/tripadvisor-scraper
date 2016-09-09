@@ -1,6 +1,6 @@
 # TripAdvisor Scrapper
 
-```TripAdvisor Scrapper``` scrapes the reviews of a whole city on [TripAdvisor](http://www.tripadvisor.com).
+Scrape the hotel reviews of a whole city on [TripAdvisor](http://www.tripadvisor.com).
 
 ## Requirements
 
@@ -51,3 +51,7 @@ Put all reviews and hotel information of a city together:
 ```python
 python tripadvisor-totalizer.py /Users/admin/tripadvisor-scrapper/data/20160716-202314-vienna
 ```
+
+## Author
+
+[Michael Andorfer](mailto:mandorfer.mmt-b2014@fh-salzburg.ac.at)
