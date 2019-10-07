@@ -110,8 +110,8 @@ def parse_hotel_urls_of_city(base_url, pagination_urls, header):
 
         # Store each hotel url in the list
         for j, city_hotel_url in enumerate(soup.find_all('a', attrs={'class': 'property_title'})):
-            hotel_urls.append(base_url + soup.find_all('a', attrs={'class': 'property_title '})[j]['href'][1:])
-            logger.info('PROCESSED: ' + base_url + soup.find_all('a', attrs={'class': 'property_title '})[j]['href'][1:])
+            hotel_urls.append(base_url + soup.find_all('a', attrs={'class': 'property_title'})[j]['href'][1:])
+            logger.info('PROCESSED: ' + base_url + soup.find_all('a', attrs={'class': 'property_title'})[j]['href'][1:])
 
     # Remove duplicates
     hotel_urls = set(hotel_urls)
