@@ -684,7 +684,7 @@ def parse_reviewer_information(user_name, user_base_url, header):
 # Main
 if __name__ == '__main__':
     # Setup commandline handler
-    parser = argparse.ArgumentParser(description='scrape the reviews of a whole city on tripadvisor' , usage='python tripadvisor-scrapper 60763 New_York_City_New_York')
+    parser = argparse.ArgumentParser(description='scrape the reviews of a whole city on tripadvisor' , usage='python tripadvisor-scraper 60763 New_York_City_New_York')
     parser.add_argument('id', help='the geolocation id of the city')
     parser.add_argument('name', help='the name of the city')
     parser.add_argument('--pickle', choices=['load', 'store'], help='[load] store a scraped reviews list as pickle for later parsing,[load] load a scraped reviews list for parsing')
