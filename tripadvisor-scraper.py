@@ -178,11 +178,11 @@ def parse_review_urls_of_hotel(base_url, pagination_urls, header):
         soup = BeautifulSoup(content, 'html.parser')
 
         # Get all review containers of the current page
-        hotel_review_containers = soup.find_all('div', attrs={'class': 'basic_review'})
+        hotel_review_containers = soup.find_all('div', attrs={'class': 'hotels-community-tab-common-Card__card--ihfZB'})
 
         # Retrieve each review url of the current hotel pagination page
         for hotel_review_container in hotel_review_containers:
-            quote = hotel_review_container.find('div', attrs={'class': 'quote'})
+            quote = hotel_review_container.find('div', attrs={'class': 'location-review-review-list-parts-ReviewTitle__reviewTitle--2GO9Z'})
 
             # Get the review url without base url
             review_url = quote.find('a')['href'][1:]
